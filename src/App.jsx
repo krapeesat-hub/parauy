@@ -3,7 +3,7 @@ import {
   Home, Calendar, Plus, PieChart, Settings, ChevronLeft, ChevronRight, X,
   Check, SkipForward, Pencil, Trash2, Wallet, TrendingUp, TrendingDown,
   AlertTriangle, Tag, Layers, Undo2, BarChart3, Receipt, ArrowLeft, User,
-  Heart, Download, Upload, LogOut, Lock, ShieldCheck, Copy, ExternalLink,
+  Heart, Download, Upload, LogOut, Lock, ShieldCheck, Copy, ExternalLink, HelpCircle,
 } from "lucide-react";
 
 /* ============================================================
@@ -66,6 +66,22 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 const INCOME_CATEGORIES = ["เงินเดือน", "รายได้อื่น", "ขายสินค้า", "ธุรกิจ", "อื่นๆ"];
 const AVATARS = ["🦉","🐢","🐘","🦁","🐝","🦊","🐧","🐼","🦄","🌱","💰","📘"];
 
+/**
+ * ข้อมูลช่องทางรับการสนับสนุน (Donate) — ตั้งเป็นค่าคงที่ในซอร์สโค้ด
+ * ไม่ใช่ค่าที่ผู้ใช้แต่ละเครื่องตั้งเอง เพราะแอปนี้เป็น local-only
+ * (ข้อมูลแต่ละเครื่องแยกกัน ไม่ sync) การฝังไว้ในโค้ดคือวิธีเดียวที่ทำให้
+ * ทุกคนที่ติดตั้งแอปเห็นช่องทางบริจาคเดียวกัน
+ *
+ * แก้ไขค่าด้านล่างนี้แล้ว build/deploy ใหม่ (git push) — เพราะ PWA มี
+ * autoUpdate อยู่แล้ว ผู้ใช้ที่ติดตั้งไปแล้วจะได้ข้อมูลใหม่อัตโนมัติ
+ * ในครั้งถัดไปที่เปิดแอปตอนมีเน็ต ไม่ต้องให้เขาลบแล้วลงใหม่
+ */
+const DONATE_INFO = {
+  name: "",       // TODO: ใส่ชื่อผู้รับบริจาค
+  promptpay: "",  // TODO: ใส่เบอร์โทร/เลขบัตร ปชช. ที่ผูก PromptPay
+  link: "",       // TODO: ลิงก์สนับสนุนอื่น เช่น buymeacoffee (ถ้ามี)
+};
+
 function buildSeed() {
   const todayDay = todayObj.getDate();
   const templates = [
@@ -124,12 +140,30 @@ function buildSeed() {
     openingBalance: 0,
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
     incomeTx, expenseTx, templates, schedules, budgets,
-    settings: { donate: { name: "", promptpay: "", link: "" } },
+    settings: {},
+  };
+}
+
+/**
+ * ข้อมูลเริ่มต้นจริงสำหรับ user ใหม่ — ว่างเปล่าทั้งหมด ไม่มีรายการตัวอย่างปลอมๆ
+ * ใช้เป็นค่า default ตอนเปิดแอปครั้งแรก และตอนกด "ลบข้อมูลทั้งหมด เริ่มต้นใหม่"
+ */
+function buildEmptyData() {
+  return {
+    openingBalance: 0,
+    expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
+    incomeTx: [],
+    expenseTx: [],
+    templates: [],
+    schedules: [],
+    budgets: {},
+    settings: {},
   };
 }
 
 const DATA_KEY = "banthuek-parauy-v1";
 const PROFILE_KEY = "banthuek-parauy-profile-v1";
+const ADMIN_KEY = "banthuek-parauy-admin-v1";
 
 /* ---------------- small UI atoms ---------------- */
 
@@ -321,10 +355,10 @@ function WelcomeScreen({ onCreate }) {
               ))}
             </div>
           </Field>
-          <Field label="ตั้งรหัส PIN 4 หลัก (ไม่บังคับ)">
-            <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" style={inputStyle} placeholder="ว่างไว้หากไม่ต้องการ" />
+          <Field label="ตั้งรหัส PIN 6 หลัก (ไม่บังคับ)">
+            <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} type="password" inputMode="numeric" autoComplete="new-password" style={{ ...inputStyle, letterSpacing: "0.4em" }} placeholder="ว่างไว้หากไม่ต้องการ" />
           </Field>
-          <PrimaryBtn disabled={!name.trim()} onClick={() => onCreate({ name: name.trim(), avatar, pin: pin.length === 4 ? pin : "", createdAt: todayStr })}>
+          <PrimaryBtn disabled={!name.trim()} onClick={() => onCreate({ name: name.trim(), avatar, pin: pin.length === 6 ? pin : "", createdAt: todayStr })}>
             เริ่มใช้งาน
           </PrimaryBtn>
         </div>
@@ -352,7 +386,7 @@ function LoginScreen({ profile, onLogin }) {
         <div style={{ fontFamily: DISPLAY_FONT, fontSize: 18, fontWeight: 700, color: C.paper }}>สวัสดี, {profile.name}</div>
         <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.goldBright, marginBottom: 20 }}>เข้าสู่บันทึกพารวยของคุณ</div>
         {profile.pin && (
-          <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setError(""); }} inputMode="numeric" placeholder="กรอกรหัส PIN"
+          <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="current-password" placeholder="กรอกรหัส PIN"
             style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em", marginBottom: 8 }} />
         )}
         {error && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: "#E8A99B", marginBottom: 8 }}>{error}</div>}
@@ -406,7 +440,7 @@ function DonateSheet({ open, onClose, donate, isOwnerView, go }) {
             ยังไม่ได้ตั้งค่าช่องทางสนับสนุน
           </div>
           {isOwnerView && (
-            <button onClick={() => { onClose(); go("settings"); }} className="text-sm underline" style={{ color: C.gold, fontFamily: BODY_FONT }}>
+            <button onClick={() => { onClose(); go("admin"); }} className="text-sm underline" style={{ color: C.gold, fontFamily: BODY_FONT }}>
               ไปตั้งค่าช่องทางบริจาค
             </button>
           )}
@@ -416,7 +450,139 @@ function DonateSheet({ open, onClose, donate, isOwnerView, go }) {
   );
 }
 
-/* ---------------- Profile ("Me") screen ---------------- */
+/* ---------------- Hidden admin (owner-only) ---------------- */
+
+function AdminGateScreen({ hasAdminPin, onUnlock, onCreate, go }) {
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [error, setError] = useState("");
+
+  const submitCreate = () => {
+    if (pin.length !== 6) { setError("รหัสต้องมี 6 หลัก"); return; }
+    if (pin !== confirmPin) { setError("รหัสยืนยันไม่ตรงกัน"); return; }
+    onCreate(pin);
+  };
+  const submitUnlock = () => {
+    if (!onUnlock(pin)) setError("รหัสไม่ถูกต้อง");
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: `linear-gradient(160deg, ${C.coverDeep}, #081810)` }}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-5">
+          <ShieldCheck size={30} color={C.goldBright} className="mx-auto mb-2" />
+          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 17, fontWeight: 700, color: C.paper }}>
+            {hasAdminPin ? "พื้นที่ผู้ดูแลระบบ" : "ตั้งรหัสผ่านผู้ดูแลระบบ"}
+          </div>
+          <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.goldBright }}>สำหรับผู้พัฒนาแอปเท่านั้น</div>
+        </div>
+        <div className="rounded-2xl p-5" style={{ background: C.paper }}>
+          {hasAdminPin ? (
+            <>
+              <Field label="รหัสผ่านผู้ดูแล 6 หลัก">
+                <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
+              </Field>
+              {error && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense, marginBottom: 8 }}>{error}</div>}
+              <PrimaryBtn onClick={submitUnlock} disabled={pin.length !== 6}>เข้าสู่ระบบผู้ดูแล</PrimaryBtn>
+            </>
+          ) : (
+            <>
+              <Field label="ตั้งรหัสผ่านผู้ดูแล 6 หลัก">
+                <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
+              </Field>
+              <Field label="ยืนยันรหัสผ่านอีกครั้ง">
+                <input value={confirmPin} onChange={(e) => { setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
+              </Field>
+              {error && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense, marginBottom: 8 }}>{error}</div>}
+              <PrimaryBtn onClick={submitCreate} disabled={pin.length !== 6}>ตั้งรหัสผ่าน</PrimaryBtn>
+            </>
+          )}
+          <button onClick={() => go("dashboard")} className="w-full mt-3 py-2 text-center" style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft }}>ยกเลิก กลับหน้าหลัก</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminScreen({ go, donate, onOpenPreview, onLockAdmin, onLoadDemo }) {
+  const hasChannel = donate.promptpay || donate.link;
+  return (
+    <div className="px-4 pt-5 pb-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <button onClick={() => { onLockAdmin(); go("dashboard"); }} style={{ color: C.inkSoft }}><ArrowLeft size={18} /></button>
+        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink, flex: 1 }}>พื้นที่ผู้ดูแลระบบ</div>
+        <ShieldCheck size={18} color={C.gold} />
+      </div>
+      <Card style={{ padding: 12, background: C.warnBg, border: "none" }}>
+        <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.warn }}>หน้านี้ผู้ใช้ทั่วไปมองไม่เห็นและเข้าไม่ถึง</div>
+      </Card>
+      <Card style={{ padding: 16 }}>
+        <SectionLabel>ช่องทางรับการสนับสนุน (Donate)</SectionLabel>
+        <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, lineHeight: 1.7, marginBottom: 10 }}>
+          ข้อมูลนี้ฝังอยู่ใน<b>ซอร์สโค้ด</b> (ค่าคงที่ <code>DONATE_INFO</code>) ไม่ใช่การตั้งค่าที่แก้ในแอปได้ เพราะแอปเป็น local-only —
+          ทุกคนที่ติดตั้งแอปนี้จะเห็นช่องทางบริจาคเดียวกันเสมอ ต้องแก้ที่โค้ดแล้ว deploy ใหม่เท่านั้น
+        </div>
+        {hasChannel ? (
+          <div className="space-y-1.5" style={{ fontFamily: MONO_FONT, fontSize: 12, color: C.ink }}>
+            {donate.name && <div>ชื่อผู้รับ: {donate.name}</div>}
+            {donate.promptpay && <div>PromptPay: {donate.promptpay}</div>}
+            {donate.link && <div>ลิงก์: {donate.link}</div>}
+          </div>
+        ) : (
+          <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense }}>
+            ยังไม่ได้ใส่ข้อมูล — แก้ค่าคงที่ <code>DONATE_INFO</code> ที่ต้นไฟล์ App.jsx แล้ว build/deploy ใหม่
+          </div>
+        )}
+      </Card>
+      <button onClick={onOpenPreview} className="w-full py-3 rounded-xl flex items-center justify-center gap-2" style={{ border: `1px solid ${C.paperLine}`, color: C.ink, fontFamily: BODY_FONT, fontSize: 13 }}>
+        <Heart size={15} color={C.expense} /> ดูตัวอย่างหน้า Donate ที่ user เห็น
+      </button>
+      <Card style={{ padding: 16 }}>
+        <SectionLabel>เครื่องมือทดสอบ</SectionLabel>
+        <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, marginBottom: 8 }}>โหลดข้อมูลตัวอย่างทับข้อมูลปัจจุบันบนเครื่องนี้ ใช้สำหรับสาธิต/ทดสอบเท่านั้น ไม่กระทบ user จริง</div>
+        <button onClick={onLoadDemo} className="w-full py-2.5 rounded-xl" style={{ border: `1px solid ${C.paperLine}`, color: C.ink, fontFamily: BODY_FONT, fontSize: 13 }}>โหลดข้อมูลตัวอย่าง</button>
+      </Card>
+      <div style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft, textAlign: "center" }}>เข้าถึงหน้านี้โดยแตะชื่อแอป "บันทึกพารวย" บนหน้าหลัก 5 ครั้งติดกัน</div>
+    </div>
+  );
+}
+
+/* ---------------- "การใช้งาน" (How-to guide) ---------------- */
+
+function GuideScreen({ go }) {
+  const steps = [
+    { title: "ตั้งเงินตั้งต้น", desc: "ไปที่ตั้งค่า → กรอกเงินคงเหลือปัจจุบันของคุณตอนเริ่มใช้แอป ใช้เป็นฐานคำนวณยอดเงินทั้งหมด", action: { label: "ไปตั้งค่า", go: "settings" } },
+    { title: "ตรวจสอบ/เพิ่มหมวดหมู่ค่าใช้จ่าย", desc: "แอปมีหมวดหมู่พื้นฐานให้แล้ว (อาหาร เดินทาง บ้าน ฯลฯ) ถ้าต้องการหมวดเพิ่มเติมเฉพาะตัว เพิ่มได้ที่นี่", action: { label: "ไปหมวดหมู่", go: "categories" } },
+    { title: "ตั้งงบประมาณรายเดือน (ถ้าต้องการ)", desc: "กำหนดวงเงินที่ตั้งใจใช้ต่อหมวดต่อเดือน แอปจะแจ้งเตือนเมื่อใกล้เต็มหรือเกินงบ ข้ามขั้นตอนนี้ได้ถ้ายังไม่พร้อม", action: { label: "ไปงบประมาณ", go: "budget" } },
+    { title: "บันทึกรายรับ", desc: "กดปุ่ม + ตรงกลางแถบล่างสุด → เลือก \"รายรับ\" → กรอกวันที่ หมวดหมู่ จำนวนเงิน แล้วบันทึก", action: null },
+    { title: "บันทึกรายจ่าย", desc: "กดปุ่ม + ตรงกลางแถบล่างสุด → เลือก \"รายจ่าย\" → กรอกข้อมูลแล้วบันทึก รายการนี้จะถือว่าจ่ายจริงทันที", action: null },
+    { title: "สร้างแผนค่าใช้จ่ายประจำ (ถ้ามี)", desc: "สำหรับรายจ่ายที่เกิดซ้ำ เช่น ค่าอาหารรายวัน ค่าเดินทาง — สร้างแผนแล้วเลือกวันในปฏิทิน ระบบจะช่วยติดตามว่าจ่ายแล้วกี่ครั้ง ค้างอยู่เท่าไหร่", action: { label: "ไปแผนค่าใช้จ่าย", go: "templates" } },
+    { title: "ดูภาพรวมที่หน้าหลัก", desc: "หน้าหลักจะสรุปเงินคงเหลือ รายรับ-รายจ่ายเดือนนี้ และรายการที่ยังต้องจ่ายให้อัตโนมัติทุกครั้งที่เปิดแอป", action: { label: "ไปหน้าหลัก", go: "dashboard" } },
+  ];
+  return (
+    <div className="px-4 pt-5 pb-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <button onClick={() => go("dashboard")} style={{ color: C.inkSoft }}><ArrowLeft size={18} /></button>
+        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink }}>วิธีการใช้งาน</div>
+      </div>
+      <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft }}>ทำตามลำดับนี้เพื่อเริ่มบันทึกรายรับ-รายจ่ายได้ทันที</div>
+      {steps.map((s, i) => (
+        <Card key={i} style={{ padding: 16 }}>
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 rounded-full flex items-center justify-center" style={{ width: 28, height: 28, background: C.cover, color: C.paper, fontFamily: MONO_FONT, fontSize: 13, fontWeight: 700 }}>{i + 1}</div>
+            <div className="flex-1">
+              <div style={{ fontFamily: DISPLAY_FONT, fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 3 }}>{s.title}</div>
+              <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, lineHeight: 1.6 }}>{s.desc}</div>
+              {s.action && (
+                <button onClick={() => go(s.action.go)} className="mt-2 text-xs font-medium" style={{ color: C.gold, fontFamily: BODY_FONT }}>{s.action.label} →</button>
+              )}
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 function ProfileScreen({ go, profile, onSaveProfile, onLogout, stats, onOpenDonate }) {
   const [editing, setEditing] = useState(false);
@@ -491,7 +657,15 @@ function ProfileScreen({ go, profile, onSaveProfile, onLogout, stats, onOpenDona
 
 /* ---------------- Dashboard ---------------- */
 
-function Dashboard({ data, derived, go, profile }) {
+function Dashboard({ data, derived, go, profile, onSecretTap }) {
+  const tapRef = useRef({ count: 0, timer: null });
+  const handleTitleTap = () => {
+    const r = tapRef.current;
+    r.count += 1;
+    if (r.timer) clearTimeout(r.timer);
+    r.timer = setTimeout(() => { r.count = 0; }, 2500);
+    if (r.count >= 5) { r.count = 0; onSecretTap(); }
+  };
   const todayIncomeTx = data.incomeTx.filter((t) => t.date === todayStr);
   const todayExpenseTx = data.expenseTx.filter((t) => t.date === todayStr);
   const alerts = derived.budgetRows.filter((r) => r.tone !== "normal").slice(0, 2);
@@ -502,18 +676,21 @@ function Dashboard({ data, derived, go, profile }) {
     { key: "templates", label: "แผนค่าใช้จ่าย", icon: Layers },
     { key: "budget", label: "งบประมาณ", icon: PieChart },
     { key: "categories", label: "หมวดหมู่", icon: Tag },
-    { key: "profile", label: "โปรไฟล์", icon: User },
+    { key: "guide", label: "การใช้งาน", icon: HelpCircle },
   ];
 
   return (
     <div className="px-4 pt-5 pb-4 space-y-4">
       <div className="flex items-start justify-between">
-        <div>
+        <div onClick={handleTitleTap} className="select-none">
           <div style={{ fontFamily: DISPLAY_FONT, fontSize: 22, fontWeight: 700, color: C.ink }}>บันทึกพารวย</div>
           <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft }}>{thaiDateLong(todayStr)}</div>
         </div>
-        <button onClick={() => go("profile")} className="rounded-full flex items-center justify-center text-lg" style={{ width: 40, height: 40, background: C.sage }}>
-          {profile.avatar}
+        <button onClick={() => go("profile")} className="flex flex-col items-center gap-1">
+          <span className="rounded-full flex items-center justify-center text-lg" style={{ width: 40, height: 40, background: C.sage }}>
+            {profile.avatar}
+          </span>
+          <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft, maxWidth: 64, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</span>
         </button>
       </div>
 
@@ -1037,9 +1214,8 @@ function CategoryScreen({ go, categories, onAdd, onDelete }) {
 
 /* ---------------- Settings ---------------- */
 
-function SettingsScreen({ go, openingBalance, onSetOpening, onReset, donate, onSaveDonate, onExport, onImport, profile, onUpdatePin }) {
+function SettingsScreen({ go, openingBalance, onSetOpening, onReset, onExport, onImport, profile, onUpdatePin }) {
   const [val, setVal] = useState(String(openingBalance));
-  const [donateForm, setDonateForm] = useState(donate);
   const [pin, setPin] = useState(profile.pin || "");
   const [pinSaved, setPinSaved] = useState(false);
   const fileRef = useRef(null);
@@ -1060,31 +1236,16 @@ function SettingsScreen({ go, openingBalance, onSetOpening, onReset, donate, onS
 
       <Card style={{ padding: 16 }}>
         <SectionLabel>ความปลอดภัย</SectionLabel>
-        <Field label="รหัส PIN 4 หลัก (ว่างไว้เพื่อไม่ใช้รหัส)">
-          <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setPinSaved(false); }} inputMode="numeric" style={inputStyle} placeholder="เช่น 1234" />
+        <Field label="รหัส PIN 6 หลัก (ว่างไว้เพื่อไม่ใช้รหัส)">
+          <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setPinSaved(false); }} type="password" inputMode="numeric" autoComplete="new-password" style={{ ...inputStyle, letterSpacing: "0.4em" }} placeholder="เช่น 123456" />
         </Field>
         <button
-          onClick={() => { onUpdatePin(pin.length === 4 ? pin : ""); setPinSaved(true); setTimeout(() => setPinSaved(false), 1500); }}
+          onClick={() => { onUpdatePin(pin.length === 6 ? pin : ""); setPinSaved(true); setTimeout(() => setPinSaved(false), 1500); }}
           className="w-full py-2.5 rounded-xl flex items-center justify-center gap-1.5"
           style={{ border: `1px solid ${C.paperLine}`, fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}
         >
           <ShieldCheck size={14} /> {pinSaved ? "บันทึกแล้ว" : "บันทึกรหัส PIN"}
         </button>
-      </Card>
-
-      <Card style={{ padding: 16 }}>
-        <SectionLabel>ช่องทางรับการสนับสนุน (Donate)</SectionLabel>
-        <Field label="ชื่อผู้รับ">
-          <input value={donateForm.name} onChange={(e) => setDonateForm({ ...donateForm, name: e.target.value })} style={inputStyle} placeholder="ชื่อของคุณ" />
-        </Field>
-        <Field label="PromptPay ID / ข้อความสำหรับ QR">
-          <input value={donateForm.promptpay} onChange={(e) => setDonateForm({ ...donateForm, promptpay: e.target.value })} style={inputStyle} placeholder="เบอร์โทร / เลขบัตร ปชช." />
-        </Field>
-        <Field label="ลิงก์สนับสนุนอื่น (ถ้ามี)">
-          <input value={donateForm.link} onChange={(e) => setDonateForm({ ...donateForm, link: e.target.value })} style={inputStyle} placeholder="https://..." />
-        </Field>
-        <button onClick={() => onSaveDonate(donateForm)} className="w-full py-2.5 rounded-xl" style={{ background: C.gold, color: C.coverDeep, fontFamily: BODY_FONT, fontSize: 13, fontWeight: 600 }}>บันทึกช่องทางสนับสนุน</button>
-        <div style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft, marginTop: 6 }}>QR ที่สร้างเป็นการแสดงข้อความที่กรอกในรูปแบบ QR เท่านั้น โปรดตรวจสอบกับแอปธนาคารของคุณก่อนใช้งานจริง</div>
       </Card>
 
       <Card style={{ padding: 16 }}>
@@ -1102,8 +1263,11 @@ function SettingsScreen({ go, openingBalance, onSetOpening, onReset, donate, onS
       </Card>
 
       <Card style={{ padding: 16 }}>
-        <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, marginBottom: 10 }}>รีเซ็ตข้อมูลทั้งหมดกลับเป็นข้อมูลตัวอย่าง การกระทำนี้ไม่สามารถย้อนกลับได้</div>
-        <button onClick={onReset} className="w-full py-3 rounded-xl" style={{ border: `1px solid ${C.expense}`, color: C.expense, fontFamily: BODY_FONT, fontSize: 13, fontWeight: 600 }}>รีเซ็ตข้อมูล</button>
+        <SectionLabel>ลบข้อมูล</SectionLabel>
+        <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, marginBottom: 10 }}>
+          ลบรายรับ รายจ่าย งบประมาณ และแผนค่าใช้จ่ายทั้งหมด เพื่อเริ่มต้นบันทึกใหม่ตั้งแต่ศูนย์ (โปรไฟล์และ PIN ของคุณจะยังอยู่เหมือนเดิม) — แนะนำให้ส่งออกข้อมูลสำรองไว้ก่อนถ้ายังไม่มั่นใจ การกระทำนี้ย้อนกลับไม่ได้
+        </div>
+        <button onClick={onReset} className="w-full py-3 rounded-xl" style={{ border: `1px solid ${C.expense}`, color: C.expense, fontFamily: BODY_FONT, fontSize: 13, fontWeight: 600 }}>ลบข้อมูลทั้งหมด เริ่มต้นใหม่</button>
       </Card>
 
       <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, textAlign: "center" }}>บันทึกพารวย V1 · Prototype</div>
@@ -1143,12 +1307,15 @@ function QuickAddSheet({ open, onClose, expenseCategories, onSaveIncome, onSaveE
    ============================================================ */
 
 export default function App() {
-  const [data, setData] = useState(buildSeed);
+  const [data, setData] = useState(buildEmptyData);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const [profile, setProfile] = useState(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
+
+  const [adminPin, setAdminPin] = useState(null);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
 
   const [screen, setScreen] = useState("dashboard");
   const [tplDetailId, setTplDetailId] = useState(null);
@@ -1175,8 +1342,8 @@ export default function App() {
           const res = await window.storage.get(DATA_KEY, false);
           if (res && res.value) {
             const loadedData = JSON.parse(res.value);
-            const base = buildSeed();
-            setData({ ...base, ...loadedData, settings: { donate: { ...base.settings.donate, ...(loadedData.settings?.donate || {}) } } });
+            const base = buildEmptyData();
+            setData({ ...base, ...loadedData });
           }
         }
       } catch (e) { /* first run */ }
@@ -1187,6 +1354,12 @@ export default function App() {
           if (res && res.value) setProfile(JSON.parse(res.value));
         }
       } catch (e) { /* no profile yet */ }
+      try {
+        if (window.storage) {
+          const res = await window.storage.get(ADMIN_KEY, false);
+          if (res && res.value) setAdminPin(res.value);
+        }
+      } catch (e) { /* no admin pin yet */ }
       setProfileLoaded(true);
     })();
   }, []);
@@ -1211,6 +1384,19 @@ export default function App() {
     if (window.storage) window.storage.set(PROFILE_KEY, JSON.stringify(p), false).catch(() => {});
   };
   const logout = () => { setSessionActive(false); go("dashboard"); };
+
+  /* ---- hidden admin area ---- */
+  const createAdminPin = (pin) => {
+    setAdminPin(pin);
+    setAdminUnlocked(true);
+    if (window.storage) window.storage.set(ADMIN_KEY, pin, false).catch(() => {});
+    go("admin");
+  };
+  const unlockAdmin = (pin) => {
+    if (pin === adminPin) { setAdminUnlocked(true); go("admin"); return true; }
+    return false;
+  };
+  const lockAdmin = () => setAdminUnlocked(false);
 
   /* ---- data mutations ---- */
   const addIncome = (tx) => setData((d) => ({ ...d, incomeTx: [...d.incomeTx, { id: uid("inc"), ...tx }] }));
@@ -1281,8 +1467,8 @@ export default function App() {
   const deleteCategory = (name) => requestConfirm(`ลบหมวดหมู่ "${name}"?`, () => setData((d) => ({ ...d, expenseCategories: d.expenseCategories.filter((c) => c !== name) })));
   const setBudget = (category, amount) => setData((d) => ({ ...d, budgets: { ...d.budgets, [category]: amount } }));
   const setOpeningBalance = (v) => setData((d) => ({ ...d, openingBalance: v }));
-  const saveDonate = (donate) => setData((d) => ({ ...d, settings: { ...d.settings, donate } }));
-  const resetAll = () => requestConfirm("รีเซ็ตข้อมูลทั้งหมดกลับเป็นข้อมูลตัวอย่าง?", () => setData(buildSeed()));
+  const resetAll = () => requestConfirm("ลบข้อมูลทั้งหมด (รายรับ รายจ่าย งบประมาณ แผนค่าใช้จ่าย) เพื่อเริ่มต้นใหม่แบบว่างเปล่า? การกระทำนี้ย้อนกลับไม่ได้", () => setData(buildEmptyData()));
+  const loadDemoData = () => requestConfirm("โหลดข้อมูลตัวอย่างทับข้อมูลปัจจุบัน? ใช้สำหรับทดสอบ/สาธิตเท่านั้น", () => setData(buildSeed()));
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -1296,8 +1482,8 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
-        const base = buildSeed();
-        setData({ ...base, ...parsed, settings: { donate: { ...base.settings.donate, ...(parsed.settings?.donate || {}) } } });
+        const base = buildEmptyData();
+        setData({ ...base, ...parsed });
       } catch (err) { alert("ไฟล์ไม่ถูกต้อง ไม่สามารถนำเข้าข้อมูลได้"); }
     };
     reader.readAsText(file);
@@ -1369,9 +1555,18 @@ export default function App() {
   }
   if (!profile) return <WelcomeScreen onCreate={createProfile} />;
   if (!sessionActive) return <LoginScreen profile={profile} onLogin={() => setSessionActive(true)} />;
+  if (screen === "adminGate") return <AdminGateScreen hasAdminPin={!!adminPin} onUnlock={unlockAdmin} onCreate={createAdminPin} go={go} />;
+  if (screen === "admin" && !adminUnlocked) return <AdminGateScreen hasAdminPin={!!adminPin} onUnlock={unlockAdmin} onCreate={createAdminPin} go={go} />;
+  if (screen === "admin") return (
+    <>
+      <AdminScreen go={go} donate={DONATE_INFO} onOpenPreview={() => setDonateOpen(true)} onLockAdmin={lockAdmin} onLoadDemo={loadDemoData} />
+      <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={DONATE_INFO} isOwnerView={true} go={go} />
+      <ConfirmDialog state={confirmState} onCancel={() => setConfirmState(null)} />
+    </>
+  );
 
   let body;
-  if (screen === "dashboard") body = <Dashboard data={data} derived={derived} go={go} profile={profile} />;
+  if (screen === "dashboard") body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} />;
   else if (screen === "calendar") body = <CalendarScreen data={data} />;
   else if (screen === "income") body = (
     <TxListScreen title="รายรับ" tone="income" txs={data.incomeTx} categories={INCOME_CATEGORIES} go={go}
@@ -1400,12 +1595,13 @@ export default function App() {
   else if (screen === "profile") body = (
     <ProfileScreen go={go} profile={profile} onSaveProfile={saveProfile} onLogout={logout} stats={profileStats} onOpenDonate={() => setDonateOpen(true)} />
   );
+  else if (screen === "guide") body = <GuideScreen go={go} />;
   else if (screen === "settings") body = (
     <SettingsScreen go={go} openingBalance={data.openingBalance} onSetOpening={setOpeningBalance} onReset={resetAll}
-      donate={data.settings.donate} onSaveDonate={saveDonate} onExport={exportData} onImport={importData}
+      onExport={exportData} onImport={importData}
       profile={profile} onUpdatePin={(pin) => saveProfile({ ...profile, pin })} />
   );
-  else body = <Dashboard data={data} derived={derived} go={go} profile={profile} />;
+  else body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} />;
 
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: C.sage, fontFamily: BODY_FONT }}>
@@ -1446,7 +1642,7 @@ export default function App() {
           )}
         </Sheet>
 
-        <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={data.settings.donate} isOwnerView={true} go={go} />
+        <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={DONATE_INFO} isOwnerView={false} go={go} />
         <ConfirmDialog state={confirmState} onCancel={() => setConfirmState(null)} />
       </div>
     </div>
