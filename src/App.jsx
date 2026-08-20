@@ -63,7 +63,7 @@ const DEFAULT_EXPENSE_CATEGORIES = [
   "บ้าน","อาหาร","เดินทาง","สาธารณูปโภค","โทรศัพท์","สุขภาพ",
   "ของใช้","ครอบครัว","บันเทิง","หนี้สิน","ธุรกิจ","อื่นๆ",
 ];
-const INCOME_CATEGORIES = ["เงินเดือน", "รายได้อื่น", "ขายสินค้า", "ธุรกิจ", "อื่นๆ"];
+const DEFAULT_INCOME_CATEGORIES = ["เงินเดือน", "รายได้อื่น", "ขายสินค้า", "ธุรกิจ", "อื่นๆ"];
 const AVATARS = ["🦉","🐢","🐘","🦁","🐝","🦊","🐧","🐼","🦄","🌱","💰","📘"];
 
 /**
@@ -139,6 +139,8 @@ function buildSeed() {
   return {
     openingBalance: 0,
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
+    incomeCategories: DEFAULT_INCOME_CATEGORIES,
+    inactiveExpenseCategories: [],
     incomeTx, expenseTx, templates, schedules, budgets,
     settings: {},
   };
@@ -152,6 +154,8 @@ function buildEmptyData() {
   return {
     openingBalance: 0,
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
+    incomeCategories: DEFAULT_INCOME_CATEGORIES,
+    inactiveExpenseCategories: [],
     incomeTx: [],
     expenseTx: [],
     templates: [],
@@ -253,6 +257,30 @@ function Sheet({ open, onClose, title, children }) {
     </div>
   );
 }
+function InstallBanner({ isIOS, onInstallClick, onDismiss }) {
+  return (
+    <div className="px-4 pt-3">
+      <Card style={{ padding: 12, background: C.cover, border: "none" }}>
+        <div className="flex items-start gap-2">
+          <Download size={16} color={C.goldBright} style={{ marginTop: 2, flexShrink: 0 }} />
+          <div className="flex-1">
+            <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.paper, fontWeight: 600, marginBottom: 2 }}>ติดตั้งแอปลงหน้าจอโฮม</div>
+            <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: "#C9D6CC", lineHeight: 1.5 }}>
+              {isIOS
+                ? 'แตะปุ่มแชร์ (ไอคอนสี่เหลี่ยมมีลูกศรชี้ขึ้น) ด้านล่างจอ Safari แล้วเลือก "เพิ่มไปยังหน้าจอโฮม" — ข้อมูลจะปลอดภัยจากการถูกลบอัตโนมัติด้วย'
+                : "ติดตั้งเพื่อเปิดใช้งานเร็วขึ้น ใช้งานได้แม้ไม่มีเน็ต และข้อมูลจะไม่ถูกลบอัตโนมัติ"}
+            </div>
+            {!isIOS && (
+              <button onClick={onInstallClick} className="mt-2 px-3 py-1.5 rounded-lg" style={{ background: C.gold, color: C.coverDeep, fontFamily: BODY_FONT, fontSize: 12, fontWeight: 600 }}>ติดตั้งเลย</button>
+            )}
+          </div>
+          <button onClick={onDismiss} style={{ color: "#C9D6CC", flexShrink: 0 }}><X size={16} /></button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function ConfirmDialog({ state, onCancel }) {
   if (!state) return null;
   return (
@@ -329,7 +357,7 @@ function MonthNav({ year, month, onPrev, onNext }) {
 
 /* ---------------- Auth: Welcome / Login ---------------- */
 
-function WelcomeScreen({ onCreate }) {
+function WelcomeScreen({ onCreate, isStandalone, isIOS, onInstallClick, canInstall }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(AVATARS[0]);
   const [pin, setPin] = useState("");
@@ -340,6 +368,19 @@ function WelcomeScreen({ onCreate }) {
           <div style={{ fontFamily: DISPLAY_FONT, fontSize: 26, fontWeight: 700, color: C.paper }}>บันทึกพารวย</div>
           <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.goldBright, marginTop: 4 }}>สมุดบัญชีส่วนตัวของคุณ</div>
         </div>
+        {!isStandalone && (
+          <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(217,184,114,0.14)", border: `1px solid ${C.goldBright}55` }}>
+            <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.goldBright, fontWeight: 600, marginBottom: 4 }}>ก่อนเริ่มใช้งาน แนะนำให้ติดตั้งแอปก่อน</div>
+            <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: "#DCE8DF", lineHeight: 1.6 }}>
+              {isIOS
+                ? 'แตะปุ่มแชร์ด้านล่างจอ Safari แล้วเลือก "เพิ่มไปยังหน้าจอโฮม" ก่อน แล้วค่อยเปิดแอปจากหน้าจอโฮมมาสร้างโปรไฟล์ ข้อมูลจะปลอดภัยกว่าและเปิดได้เร็วกว่า'
+                : "ติดตั้งแอปลงหน้าจอโฮมก่อนสร้างโปรไฟล์ จะช่วยให้ข้อมูลไม่ถูกลบอัตโนมัติและเปิดใช้งานได้เร็วขึ้น"}
+            </div>
+            {canInstall && (
+              <button onClick={onInstallClick} className="mt-2.5 w-full py-2 rounded-lg" style={{ background: C.gold, color: C.coverDeep, fontFamily: BODY_FONT, fontSize: 12, fontWeight: 600 }}>ติดตั้งแอปตอนนี้</button>
+            )}
+          </div>
+        )}
         <div className="rounded-2xl p-5" style={{ background: C.paper }}>
           <div style={{ fontFamily: DISPLAY_FONT, fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 12 }}>สร้างโปรไฟล์ของฉัน</div>
           <Field label="ชื่อที่แสดง">
@@ -584,7 +625,38 @@ function GuideScreen({ go }) {
   );
 }
 
-function ProfileScreen({ go, profile, onSaveProfile, onLogout, stats, onOpenDonate }) {
+/* ---------------- About / เกี่ยวกับผู้พัฒนา ---------------- */
+
+function AboutScreen({ go, onOpenDonate }) {
+  return (
+    <div className="px-4 pt-5 pb-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <button onClick={() => go("settings")} style={{ color: C.inkSoft }}><ArrowLeft size={18} /></button>
+        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink }}>เกี่ยวกับแอปนี้</div>
+      </div>
+
+      <Card style={{ padding: 20, background: `linear-gradient(135deg, ${C.cover}, ${C.coverDeep})`, border: "none", textAlign: "center" }}>
+        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.paper }}>บันทึกพารวย</div>
+        <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.goldBright, marginTop: 4 }}>สมุดบัญชีรายรับ-รายจ่ายส่วนตัว</div>
+      </Card>
+
+      <Card style={{ padding: 16 }}>
+        <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink, lineHeight: 1.8 }}>
+          แอปนี้พัฒนาขึ้นเพื่อช่วยให้การบันทึกรายรับ-รายจ่ายเป็นเรื่องง่าย เก็บข้อมูลไว้บนเครื่องของคุณเองทั้งหมด
+          ไม่มีการส่งข้อมูลการเงินของคุณไปที่ไหน หากแอปนี้มีประโยชน์กับคุณ สามารถสนับสนุนผู้พัฒนาได้ตามกำลังครับ 🙏
+        </div>
+      </Card>
+
+      <button onClick={onOpenDonate} className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2" style={{ background: C.expenseBg, color: C.expense, fontFamily: BODY_FONT, fontSize: 14, fontWeight: 600 }}>
+        <Heart size={16} fill={C.expense} /> สนับสนุนผู้พัฒนา
+      </button>
+
+      <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, textAlign: "center" }}>บันทึกพารวย V1 · Local-only PWA</div>
+    </div>
+  );
+}
+
+function ProfileScreen({ go, profile, onSaveProfile, onLogout, stats }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [avatar, setAvatar] = useState(profile.avatar);
@@ -639,10 +711,6 @@ function ProfileScreen({ go, profile, onSaveProfile, onLogout, stats, onOpenDona
           <div style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft }}>แผนค่าใช้จ่าย</div>
         </Card>
       </div>
-
-      <button onClick={onOpenDonate} className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2" style={{ background: C.expenseBg, color: C.expense, fontFamily: BODY_FONT, fontSize: 14, fontWeight: 600 }}>
-        <Heart size={16} fill={C.expense} /> สนับสนุนผู้พัฒนา
-      </button>
 
       <button onClick={() => go("settings")} className="w-full py-3 rounded-xl flex items-center justify-center gap-2" style={{ border: `1px solid ${C.paperLine}`, color: C.ink, fontFamily: BODY_FONT, fontSize: 13 }}>
         <Settings size={15} /> ตั้งค่าบัญชีและข้อมูล
@@ -791,10 +859,12 @@ function Dashboard({ data, derived, go, profile, onSecretTap }) {
 
 /* ---------------- Calendar (main) ---------------- */
 
-function CalendarScreen({ data }) {
+function CalendarScreen({ data, expenseCategories, incomeCategories, onAddIncome, onAddExpense, onUpdateIncome, onUpdateExpense, onDeleteIncome, onDeleteExpense }) {
   const [year, setYear] = useState(SEED_YEAR);
   const [month, setMonth] = useState(SEED_MONTH);
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [addMode, setAddMode] = useState(null); // null | "pick" | "income" | "expense"
+  const [editTx, setEditTx] = useState(null); // { kind, tx }
 
   const dayMarks = useMemo(() => {
     const m = {};
@@ -809,6 +879,8 @@ function CalendarScreen({ data }) {
   const incSum = dayIncome.reduce((s, t) => s + t.amount, 0);
   const expSum = dayExpense.reduce((s, t) => s + t.amount, 0);
 
+  const closeAdd = () => setAddMode(null);
+
   return (
     <div className="px-4 pt-5 pb-4 space-y-4">
       <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink }}>ปฏิทิน</div>
@@ -820,14 +892,21 @@ function CalendarScreen({ data }) {
         />
       </Card>
       <Card style={{ padding: 16 }}>
-        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 10 }}>{thaiDateLong(selectedDate)}</div>
+        <div className="flex items-center justify-between mb-2">
+          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 15, fontWeight: 700, color: C.ink }}>{thaiDateLong(selectedDate)}</div>
+          <button onClick={() => setAddMode("pick")} className="p-1.5 rounded-lg" style={{ background: C.cover }}><Plus size={14} color={C.paper} /></button>
+        </div>
         {dayIncome.length > 0 && (
           <div className="mb-3">
             <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, marginBottom: 4 }}>รายรับ</div>
             {dayIncome.map((t) => (
-              <div key={t.id} className="flex justify-between py-0.5">
-                <span style={{ fontFamily: BODY_FONT, fontSize: 13 }}>{t.category}</span>
-                <Money value={t.amount} tone="income" size={13} />
+              <div key={t.id} className="flex items-center justify-between py-1" style={{ borderTop: `1px dashed ${C.paperLine}` }}>
+                <span style={{ fontFamily: BODY_FONT, fontSize: 13 }}>{t.category}{t.note ? ` — ${t.note}` : ""}</span>
+                <div className="flex items-center gap-1">
+                  <Money value={t.amount} tone="income" size={13} />
+                  <IconBtn icon={Pencil} onClick={() => setEditTx({ kind: "income", tx: t })} />
+                  <IconBtn icon={Trash2} tone="expense" onClick={() => onDeleteIncome(t)} />
+                </div>
               </div>
             ))}
           </div>
@@ -836,15 +915,19 @@ function CalendarScreen({ data }) {
           <div className="mb-3">
             <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, marginBottom: 4 }}>รายจ่าย</div>
             {dayExpense.map((t) => (
-              <div key={t.id} className="flex justify-between py-0.5">
-                <span style={{ fontFamily: BODY_FONT, fontSize: 13 }}>{t.category}</span>
-                <Money value={t.amount} tone="expense" size={13} />
+              <div key={t.id} className="flex items-center justify-between py-1" style={{ borderTop: `1px dashed ${C.paperLine}` }}>
+                <span style={{ fontFamily: BODY_FONT, fontSize: 13 }}>{t.category}{t.note ? ` — ${t.note}` : ""}</span>
+                <div className="flex items-center gap-1">
+                  <Money value={t.amount} tone="expense" size={13} />
+                  <IconBtn icon={Pencil} onClick={() => setEditTx({ kind: "expense", tx: t })} />
+                  <IconBtn icon={Trash2} tone="expense" onClick={() => onDeleteExpense(t)} />
+                </div>
               </div>
             ))}
           </div>
         )}
         {dayIncome.length === 0 && dayExpense.length === 0 && (
-          <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.inkSoft }}>ไม่มีรายการในวันนี้</div>
+          <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.inkSoft }}>ไม่มีรายการในวันนี้ — แตะ + เพื่อเพิ่ม</div>
         )}
         <GoldRule />
         <div className="flex justify-between pt-2">
@@ -852,6 +935,33 @@ function CalendarScreen({ data }) {
           <Money value={incSum - expSum} tone={incSum - expSum >= 0 ? "income" : "expense"} size={15} weight={700} />
         </div>
       </Card>
+
+      <Sheet open={!!addMode} onClose={closeAdd} title={addMode === "income" ? "เพิ่มรายรับ" : addMode === "expense" ? "เพิ่มรายจ่าย" : "เพิ่มรายการ"}>
+        {addMode === "pick" && (
+          <div className="space-y-2">
+            <button onClick={() => setAddMode("income")} className="w-full py-4 rounded-xl flex items-center gap-3 px-4" style={{ background: C.incomeBg }}>
+              <TrendingUp size={18} color={C.income} /><span style={{ fontFamily: BODY_FONT, fontSize: 14, color: C.income, fontWeight: 600 }}>รายรับ</span>
+            </button>
+            <button onClick={() => setAddMode("expense")} className="w-full py-4 rounded-xl flex items-center gap-3 px-4" style={{ background: C.expenseBg }}>
+              <TrendingDown size={18} color={C.expense} /><span style={{ fontFamily: BODY_FONT, fontSize: 14, color: C.expense, fontWeight: 600 }}>รายจ่าย</span>
+            </button>
+          </div>
+        )}
+        {addMode === "income" && (
+          <TxForm categories={incomeCategories} initial={{ date: selectedDate, category: incomeCategories[0], amount: "", note: "" }} onCancel={closeAdd} onSave={(v) => { onAddIncome(v); closeAdd(); }} />
+        )}
+        {addMode === "expense" && (
+          <TxForm categories={expenseCategories} initial={{ date: selectedDate, category: expenseCategories[0], amount: "", note: "" }} onCancel={closeAdd} onSave={(v) => { onAddExpense(v); closeAdd(); }} />
+        )}
+      </Sheet>
+
+      <Sheet open={!!editTx} onClose={() => setEditTx(null)} title="แก้ไขรายการ">
+        {editTx && (
+          <TxForm categories={editTx.kind === "income" ? incomeCategories : expenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)}
+            onSave={(v) => { if (editTx.kind === "income") onUpdateIncome(editTx.tx.id, v); else onUpdateExpense(editTx.tx.id, v); setEditTx(null); }} />
+        )}
+      </Sheet>
+
     </div>
   );
 }
@@ -939,12 +1049,13 @@ function TxForm({ categories, initial, onSave, onCancel }) {
   const [category, setCategory] = useState(initial?.category || categories[0]);
   const [amount, setAmount] = useState(initial?.amount ?? "");
   const [note, setNote] = useState(initial?.note || "");
+  const options = initial?.category && !categories.includes(initial.category) ? [initial.category, ...categories] : categories;
   return (
     <div>
       <Field label="วันที่"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></Field>
       <Field label="หมวดหมู่">
         <select value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle}>
-          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          {options.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
       <Field label="จำนวนเงิน (บาท)"><input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} placeholder="0" /></Field>
@@ -1002,14 +1113,14 @@ function TemplatesScreen({ templates, schedules, go, setTplDetail, onDelete }) {
   );
 }
 
-function TemplateForm({ categories, onSave, onCancel }) {
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState(categories[0]);
-  const [type, setType] = useState("multi");
-  const [totalBudget, setTotalBudget] = useState("");
-  const [plannedCount, setPlannedCount] = useState("");
-  const [amountPer, setAmountPer] = useState("");
-  const [amountTouched, setAmountTouched] = useState(false);
+function TemplateForm({ categories, initial, submitLabel, onSave, onCancel }) {
+  const [name, setName] = useState(initial?.name || "");
+  const [category, setCategory] = useState(initial?.category || categories[0]);
+  const [type, setType] = useState(initial?.type || "multi");
+  const [totalBudget, setTotalBudget] = useState(initial ? String(initial.totalBudget) : "");
+  const [plannedCount, setPlannedCount] = useState(initial ? String(initial.plannedCount) : "");
+  const [amountPer, setAmountPer] = useState(initial ? String(initial.amountPerOccurrence) : "");
+  const [amountTouched, setAmountTouched] = useState(!!initial);
 
   useEffect(() => { if (type === "once") setPlannedCount("1"); }, [type]);
   useEffect(() => {
@@ -1018,12 +1129,13 @@ function TemplateForm({ categories, onSave, onCancel }) {
   }, [totalBudget, plannedCount, amountTouched]);
 
   const valid = name && Number(totalBudget) > 0 && Number(plannedCount) > 0 && Number(amountPer) > 0;
+  const categoryOptions = category && !categories.includes(category) ? [category, ...categories] : categories;
 
   return (
     <div>
       <Field label="ชื่อรายการ"><input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="เช่น ค่าอาหาร" /></Field>
       <Field label="หมวดหมู่">
-        <select value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+        <select value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle}>{categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}</select>
       </Field>
       <Field label="รูปแบบ">
         <div className="flex gap-2">
@@ -1035,19 +1147,21 @@ function TemplateForm({ categories, onSave, onCancel }) {
       <Field label="งบทั้งหมด (บาท)"><input type="number" value={totalBudget} onChange={(e) => setTotalBudget(e.target.value)} style={inputStyle} placeholder="0" /></Field>
       {type === "multi" && <Field label="จำนวนครั้ง"><input type="number" value={plannedCount} onChange={(e) => setPlannedCount(e.target.value)} style={inputStyle} placeholder="0" /></Field>}
       <Field label="จำนวนเงินต่อครั้ง (บาท)"><input type="number" value={amountPer} onChange={(e) => { setAmountPer(e.target.value); setAmountTouched(true); }} style={inputStyle} /></Field>
+      {initial && <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, marginBottom: 10 }}>การแก้ไขนี้มีผลกับรายการที่ยังไม่ได้เลือกวัน/ยังไม่จ่ายเท่านั้น รายการที่จ่ายแล้วจะเก็บยอดเดิมไว้เป็นประวัติ</div>}
       <div className="flex gap-2 mt-2">
         <button onClick={onCancel} className="flex-1 py-3 rounded-xl" style={{ border: `1px solid ${C.paperLine}`, fontFamily: BODY_FONT, fontSize: 14, color: C.inkSoft }}>ยกเลิก</button>
         <div className="flex-[2]">
-          <PrimaryBtn disabled={!valid} onClick={() => onSave({ name, category, type, totalBudget: Number(totalBudget), plannedCount: Number(plannedCount), amountPerOccurrence: Number(amountPer) })}>สร้างแผนและเลือกวัน</PrimaryBtn>
+          <PrimaryBtn disabled={!valid} onClick={() => onSave({ name, category, type, totalBudget: Number(totalBudget), plannedCount: Number(plannedCount), amountPerOccurrence: Number(amountPer) })}>{submitLabel || "สร้างแผนและเลือกวัน"}</PrimaryBtn>
         </div>
       </div>
     </div>
   );
 }
 
-function TemplateDetail({ template, schedules, go, onToggleDay, onSetStatus, onDeleteSchedule }) {
+function TemplateDetail({ template, schedules, go, onToggleDay, onSetStatus, onDeleteSchedule, onUpdateTemplate, categories }) {
   const [year, setYear] = useState(SEED_YEAR);
   const [month, setMonth] = useState(SEED_MONTH);
+  const [editing, setEditing] = useState(false);
   const tplSchedules = schedules.filter((s) => s.templateId === template.id).sort((a, b) => a.date.localeCompare(b.date));
   const selectedSet = new Set(tplSchedules.map((s) => s.date));
   const plannedN = tplSchedules.length;
@@ -1064,7 +1178,8 @@ function TemplateDetail({ template, schedules, go, onToggleDay, onSetStatus, onD
     <div className="px-4 pt-5 pb-4 space-y-4">
       <div className="flex items-center gap-2">
         <button onClick={() => go("templates")} style={{ color: C.inkSoft }}><ArrowLeft size={18} /></button>
-        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 18, fontWeight: 700, color: C.ink }}>{template.name}</div>
+        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 18, fontWeight: 700, color: C.ink, flex: 1 }}>{template.name}</div>
+        <IconBtn icon={Pencil} onClick={() => setEditing(true)} />
       </div>
       <Card style={{ padding: 16 }}>
         <div className="grid grid-cols-3 gap-2 text-center mb-3">
@@ -1110,6 +1225,11 @@ function TemplateDetail({ template, schedules, go, onToggleDay, onSetStatus, onD
           ))}
         </div>
       </Card>
+
+      <Sheet open={editing} onClose={() => setEditing(false)} title="แก้ไขแผนค่าใช้จ่าย">
+        <TemplateForm categories={categories} initial={template} submitLabel="บันทึกการแก้ไข" onCancel={() => setEditing(false)}
+          onSave={(v) => { onUpdateTemplate(template.id, v); setEditing(false); }} />
+      </Sheet>
     </div>
   );
 }
@@ -1181,33 +1301,81 @@ function ReportScreen({ stats, monthNav }) {
 
 /* ---------------- Category management ---------------- */
 
-function CategoryScreen({ go, categories, onAdd, onDelete }) {
+function ToggleSwitch({ checked, onChange }) {
+  return (
+    <button onClick={() => onChange(!checked)} className="relative rounded-full transition flex-shrink-0" style={{ width: 38, height: 22, background: checked ? C.income : C.paperLine }}>
+      <span className="absolute rounded-full transition-all" style={{ width: 18, height: 18, top: 2, left: checked ? 18 : 2, background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.25)" }} />
+    </button>
+  );
+}
+
+function CategoryScreen({ go, expenseCategories, inactiveExpenseCategories, incomeCategories, onAddExpense, onDeleteExpense, onToggleExpenseActive, onAddIncome, onDeleteIncome }) {
+  const [tab, setTab] = useState("expense");
   const [name, setName] = useState("");
-  const defaults = new Set(DEFAULT_EXPENSE_CATEGORIES);
+  const defaultsExpense = new Set(DEFAULT_EXPENSE_CATEGORIES);
+  const defaultsIncome = new Set(DEFAULT_INCOME_CATEGORIES);
+  const inactiveSet = new Set(inactiveExpenseCategories);
+
+  const add = () => {
+    if (!name.trim()) return;
+    if (tab === "expense") onAddExpense(name.trim()); else onAddIncome(name.trim());
+    setName("");
+  };
+
   return (
     <div className="px-4 pt-5 pb-4 space-y-3">
       <div className="flex items-center gap-2">
         <button onClick={() => go("dashboard")} style={{ color: C.inkSoft }}><ArrowLeft size={18} /></button>
-        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink }}>หมวดค่าใช้จ่าย</div>
+        <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink }}>หมวดหมู่</div>
+      </div>
+      <div className="flex gap-2">
+        {[["expense", "รายจ่าย"], ["income", "รายรับ"]].map(([v, l]) => (
+          <button key={v} onClick={() => setTab(v)} className="flex-1 py-2.5 rounded-xl" style={{ background: tab === v ? C.cover : C.card, color: tab === v ? C.paper : C.ink, border: `1px solid ${tab === v ? C.cover : C.paperLine}`, fontFamily: BODY_FONT, fontSize: 13 }}>{l}</button>
+        ))}
       </div>
       <Card style={{ padding: 14 }}>
         <div className="flex gap-2">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อหมวดใหม่" style={inputStyle} />
-          <button onClick={() => { if (name.trim()) { onAdd(name.trim()); setName(""); } }} className="px-4 rounded-xl" style={{ background: C.cover, color: C.paper, fontFamily: BODY_FONT, fontSize: 13 }}>เพิ่ม</button>
+          <button onClick={add} className="px-4 rounded-xl" style={{ background: C.cover, color: C.paper, fontFamily: BODY_FONT, fontSize: 13 }}>เพิ่ม</button>
         </div>
       </Card>
-      <Card style={{ padding: 8 }}>
-        {categories.map((c) => (
-          <div key={c} className="flex items-center justify-between px-3 py-2.5" style={{ borderBottom: `1px solid ${C.paperLine}` }}>
-            <div className="flex items-center gap-2">
-              <Tag size={14} color={C.gold} />
-              <span style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}>{c}</span>
-              {defaults.has(c) && <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft }}>(พื้นฐาน)</span>}
+
+      {tab === "expense" ? (
+        <>
+          <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft }}>ปิดสวิตช์หมวดที่ไม่ได้ใช้ เพื่อไม่ให้แสดงในหน้างบประมาณและตัวเลือกตอนบันทึกรายจ่าย</div>
+          <Card style={{ padding: 8 }}>
+            {expenseCategories.map((c) => {
+              const active = !inactiveSet.has(c);
+              return (
+                <div key={c} className="flex items-center justify-between px-3 py-2.5" style={{ borderBottom: `1px solid ${C.paperLine}`, opacity: active ? 1 : 0.5 }}>
+                  <div className="flex items-center gap-2">
+                    <Tag size={14} color={C.gold} />
+                    <span style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}>{c}</span>
+                    {defaultsExpense.has(c) && <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft }}>(พื้นฐาน)</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ToggleSwitch checked={active} onChange={() => onToggleExpenseActive(c)} />
+                    {!defaultsExpense.has(c) && <IconBtn icon={Trash2} tone="expense" onClick={() => onDeleteExpense(c)} />}
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+        </>
+      ) : (
+        <Card style={{ padding: 8 }}>
+          {incomeCategories.map((c) => (
+            <div key={c} className="flex items-center justify-between px-3 py-2.5" style={{ borderBottom: `1px solid ${C.paperLine}` }}>
+              <div className="flex items-center gap-2">
+                <Tag size={14} color={C.gold} />
+                <span style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}>{c}</span>
+                {defaultsIncome.has(c) && <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft }}>(พื้นฐาน)</span>}
+              </div>
+              {!defaultsIncome.has(c) && <IconBtn icon={Trash2} tone="expense" onClick={() => onDeleteIncome(c)} />}
             </div>
-            {!defaults.has(c) && <IconBtn icon={Trash2} tone="expense" onClick={() => onDelete(c)} />}
-          </div>
-        ))}
-      </Card>
+          ))}
+        </Card>
+      )}
     </div>
   );
 }
@@ -1262,6 +1430,10 @@ function SettingsScreen({ go, openingBalance, onSetOpening, onReset, onExport, o
         </div>
       </Card>
 
+      <button onClick={() => go("about")} className="w-full py-3 rounded-xl flex items-center justify-center gap-2" style={{ border: `1px solid ${C.paperLine}`, color: C.ink, fontFamily: BODY_FONT, fontSize: 13 }}>
+        <Heart size={14} color={C.expense} /> เกี่ยวกับแอปนี้ / สนับสนุนผู้พัฒนา
+      </button>
+
       <Card style={{ padding: 16 }}>
         <SectionLabel>ลบข้อมูล</SectionLabel>
         <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, marginBottom: 10 }}>
@@ -1277,7 +1449,7 @@ function SettingsScreen({ go, openingBalance, onSetOpening, onReset, onExport, o
 
 /* ---------------- Quick Add sheet ---------------- */
 
-function QuickAddSheet({ open, onClose, expenseCategories, onSaveIncome, onSaveExpense, onCreateTemplate }) {
+function QuickAddSheet({ open, onClose, expenseCategories, incomeCategories, onSaveIncome, onSaveExpense, onCreateTemplate }) {
   const [mode, setMode] = useState(null);
   useEffect(() => { if (!open) setMode(null); }, [open]);
   return (
@@ -1295,7 +1467,7 @@ function QuickAddSheet({ open, onClose, expenseCategories, onSaveIncome, onSaveE
           </button>
         </div>
       )}
-      {mode === "income" && <TxForm categories={INCOME_CATEGORIES} onCancel={() => setMode(null)} onSave={(v) => { onSaveIncome(v); onClose(); }} />}
+      {mode === "income" && <TxForm categories={incomeCategories} onCancel={() => setMode(null)} onSave={(v) => { onSaveIncome(v); onClose(); }} />}
       {mode === "expense" && <TxForm categories={expenseCategories} onCancel={() => setMode(null)} onSave={(v) => { onSaveExpense(v); onClose(); }} />}
       {mode === "template" && <TemplateForm categories={expenseCategories} onCancel={() => setMode(null)} onSave={(v) => { onCreateTemplate(v); onClose(); }} />}
     </Sheet>
@@ -1325,6 +1497,39 @@ export default function App() {
   const [confirmState, setConfirmState] = useState(null);
   const [reportYM, setReportYM] = useState({ y: SEED_YEAR, m: SEED_MONTH });
 
+  const [installPromptEvent, setInstallPromptEvent] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(true); // assume installed until checked, avoids a flash of the banner
+  const [isIOS, setIsIOS] = useState(false);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const standalone = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    setIsStandalone(standalone);
+    setIsIOS(/iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()));
+    const handler = (e) => { e.preventDefault(); setInstallPromptEvent(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  useEffect(() => {
+    if (isStandalone) { setShowInstallBanner(false); return; }
+    const dismissedAt = localStorage.getItem("parauy:install-dismissed");
+    const cooldownPassed = !dismissedAt || Date.now() - Number(dismissedAt) > 3 * 24 * 60 * 60 * 1000;
+    if (cooldownPassed && (installPromptEvent || isIOS)) setShowInstallBanner(true);
+  }, [isStandalone, installPromptEvent, isIOS]);
+
+  const dismissInstallBanner = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem("parauy:install-dismissed", String(Date.now()));
+  };
+  const triggerInstall = async () => {
+    if (!installPromptEvent) return;
+    installPromptEvent.prompt();
+    await installPromptEvent.userChoice;
+    setInstallPromptEvent(null);
+    setShowInstallBanner(false);
+  };
+
   // fonts
   useEffect(() => {
     const link = document.createElement("link");
@@ -1344,6 +1549,8 @@ export default function App() {
             const loadedData = JSON.parse(res.value);
             const base = buildEmptyData();
             setData({ ...base, ...loadedData });
+          } else {
+            setData(buildSeed()); // first-time user: show sample data as a working example
           }
         }
       } catch (e) { /* first run */ }
@@ -1421,6 +1628,7 @@ export default function App() {
     const schedIds = new Set(d.schedules.filter((s) => s.templateId === tpl.id).map((s) => s.id));
     return { ...d, templates: d.templates.filter((t) => t.id !== tpl.id), schedules: d.schedules.filter((s) => s.templateId !== tpl.id), expenseTx: d.expenseTx.filter((t) => !schedIds.has(t.scheduleId)) };
   }));
+  const updateTemplate = (id, patch) => setData((d) => ({ ...d, templates: d.templates.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
 
   const toggleScheduleDay = (template, dateStr, atLimit) => {
     setData((d) => {
@@ -1464,7 +1672,14 @@ export default function App() {
   })));
 
   const addCategory = (name) => setData((d) => (d.expenseCategories.includes(name) ? d : { ...d, expenseCategories: [...d.expenseCategories, name] }));
-  const deleteCategory = (name) => requestConfirm(`ลบหมวดหมู่ "${name}"?`, () => setData((d) => ({ ...d, expenseCategories: d.expenseCategories.filter((c) => c !== name) })));
+  const deleteCategory = (name) => requestConfirm(`ลบหมวดหมู่ "${name}"?`, () => setData((d) => ({ ...d, expenseCategories: d.expenseCategories.filter((c) => c !== name), inactiveExpenseCategories: (d.inactiveExpenseCategories || []).filter((c) => c !== name) })));
+  const toggleExpenseCategoryActive = (name) => setData((d) => {
+    const inactive = new Set(d.inactiveExpenseCategories || []);
+    if (inactive.has(name)) inactive.delete(name); else inactive.add(name);
+    return { ...d, inactiveExpenseCategories: Array.from(inactive) };
+  });
+  const addIncomeCategory = (name) => setData((d) => (d.incomeCategories.includes(name) ? d : { ...d, incomeCategories: [...d.incomeCategories, name] }));
+  const deleteIncomeCategory = (name) => requestConfirm(`ลบหมวดหมู่ "${name}"?`, () => setData((d) => ({ ...d, incomeCategories: d.incomeCategories.filter((c) => c !== name) })));
   const setBudget = (category, amount) => setData((d) => ({ ...d, budgets: { ...d.budgets, [category]: amount } }));
   const setOpeningBalance = (v) => setData((d) => ({ ...d, openingBalance: v }));
   const resetAll = () => requestConfirm("ลบข้อมูลทั้งหมด (รายรับ รายจ่าย งบประมาณ แผนค่าใช้จ่าย) เพื่อเริ่มต้นใหม่แบบว่างเปล่า? การกระทำนี้ย้อนกลับไม่ได้", () => setData(buildEmptyData()));
@@ -1490,6 +1705,11 @@ export default function App() {
   };
 
   /* ---- derived (current real month, for dashboard) ---- */
+  const activeExpenseCategories = useMemo(() => {
+    const inactive = new Set(data.inactiveExpenseCategories || []);
+    return data.expenseCategories.filter((c) => !inactive.has(c));
+  }, [data.expenseCategories, data.inactiveExpenseCategories]);
+
   const monthStats = useCallback((y, m) => {
     const mk = dstr(y, m, 1).slice(0, 7);
     const monthIncome = data.incomeTx.filter((t) => monthKey(t.date) === mk).reduce((s, t) => s + t.amount, 0);
@@ -1497,7 +1717,7 @@ export default function App() {
     const byCat = {};
     data.expenseTx.filter((t) => monthKey(t.date) === mk).forEach((t) => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
     const breakdown = Object.entries(byCat).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
-    const allCats = new Set([...Object.keys(data.budgets), ...data.expenseCategories]);
+    const allCats = new Set(activeExpenseCategories);
     const budgetRows = Array.from(allCats).map((category) => {
       const budget = data.budgets[category] || 0;
       const actual = byCat[category] || 0;
@@ -1553,7 +1773,7 @@ export default function App() {
       </div>
     );
   }
-  if (!profile) return <WelcomeScreen onCreate={createProfile} />;
+  if (!profile) return <WelcomeScreen onCreate={createProfile} isStandalone={isStandalone} isIOS={isIOS} onInstallClick={triggerInstall} canInstall={!!installPromptEvent} />;
   if (!sessionActive) return <LoginScreen profile={profile} onLogin={() => setSessionActive(true)} />;
   if (screen === "adminGate") return <AdminGateScreen hasAdminPin={!!adminPin} onUnlock={unlockAdmin} onCreate={createAdminPin} go={go} />;
   if (screen === "admin" && !adminUnlocked) return <AdminGateScreen hasAdminPin={!!adminPin} onUnlock={unlockAdmin} onCreate={createAdminPin} go={go} />;
@@ -1567,13 +1787,17 @@ export default function App() {
 
   let body;
   if (screen === "dashboard") body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} />;
-  else if (screen === "calendar") body = <CalendarScreen data={data} />;
+  else if (screen === "calendar") body = (
+    <CalendarScreen data={data} expenseCategories={activeExpenseCategories} incomeCategories={data.incomeCategories}
+      onAddIncome={addIncome} onAddExpense={addExpense} onUpdateIncome={updateIncome} onUpdateExpense={updateExpense}
+      onDeleteIncome={deleteIncome} onDeleteExpense={deleteExpense} />
+  );
   else if (screen === "income") body = (
-    <TxListScreen title="รายรับ" tone="income" txs={data.incomeTx} categories={INCOME_CATEGORIES} go={go}
+    <TxListScreen title="รายรับ" tone="income" txs={data.incomeTx} categories={data.incomeCategories} go={go}
       onAdd={() => setEditTx({ kind: "income", tx: null })} onEdit={(tx) => setEditTx({ kind: "income", tx })} onDelete={deleteIncome} />
   );
   else if (screen === "expense") body = (
-    <TxListScreen title="รายจ่าย" tone="expense" txs={data.expenseTx} categories={data.expenseCategories} go={go}
+    <TxListScreen title="รายจ่าย" tone="expense" txs={data.expenseTx} categories={activeExpenseCategories} go={go}
       onAdd={() => setEditTx({ kind: "expense", tx: null })} onEdit={(tx) => setEditTx({ kind: "expense", tx })} onDelete={deleteExpense} />
   );
   else if (screen === "templates") body = <TemplatesScreen templates={data.templates} schedules={data.schedules} go={go} setTplDetail={setTplDetailId} onDelete={deleteTemplate} />;
@@ -1583,17 +1807,21 @@ export default function App() {
         <button onClick={() => go("templates")} style={{ color: C.inkSoft }}><ArrowLeft size={18} /></button>
         <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink }}>สร้างแผนค่าใช้จ่าย</div>
       </div>
-      <Card style={{ padding: 16 }}><TemplateForm categories={data.expenseCategories} onCancel={() => go("templates")} onSave={addTemplate} /></Card>
+      <Card style={{ padding: 16 }}><TemplateForm categories={activeExpenseCategories} onCancel={() => go("templates")} onSave={addTemplate} /></Card>
     </div>
   );
   else if (screen === "templateDetail" && template) body = (
-    <TemplateDetail template={template} schedules={data.schedules} go={go} onToggleDay={toggleScheduleDay} onSetStatus={setScheduleStatus} onDeleteSchedule={deleteSchedule} />
+    <TemplateDetail template={template} schedules={data.schedules} go={go} onToggleDay={toggleScheduleDay} onSetStatus={setScheduleStatus} onDeleteSchedule={deleteSchedule} onUpdateTemplate={updateTemplate} categories={activeExpenseCategories} />
   );
   else if (screen === "budget") body = <BudgetScreen go={go} budgetRows={reportStats.budgetRows} onSetBudget={setBudget} monthNav={monthNavProps} />;
   else if (screen === "report") body = <ReportScreen stats={reportStats} monthNav={monthNavProps} />;
-  else if (screen === "categories") body = <CategoryScreen go={go} categories={data.expenseCategories} onAdd={addCategory} onDelete={deleteCategory} />;
+  else if (screen === "categories") body = (
+    <CategoryScreen go={go} expenseCategories={data.expenseCategories} inactiveExpenseCategories={data.inactiveExpenseCategories || []} incomeCategories={data.incomeCategories}
+      onAddExpense={addCategory} onDeleteExpense={deleteCategory} onToggleExpenseActive={toggleExpenseCategoryActive}
+      onAddIncome={addIncomeCategory} onDeleteIncome={deleteIncomeCategory} />
+  );
   else if (screen === "profile") body = (
-    <ProfileScreen go={go} profile={profile} onSaveProfile={saveProfile} onLogout={logout} stats={profileStats} onOpenDonate={() => setDonateOpen(true)} />
+    <ProfileScreen go={go} profile={profile} onSaveProfile={saveProfile} onLogout={logout} stats={profileStats} />
   );
   else if (screen === "guide") body = <GuideScreen go={go} />;
   else if (screen === "settings") body = (
@@ -1601,11 +1829,13 @@ export default function App() {
       onExport={exportData} onImport={importData}
       profile={profile} onUpdatePin={(pin) => saveProfile({ ...profile, pin })} />
   );
+  else if (screen === "about") body = <AboutScreen go={go} onOpenDonate={() => setDonateOpen(true)} />;
   else body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} />;
 
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: C.sage, fontFamily: BODY_FONT }}>
       <div className="w-full max-w-md relative" style={{ background: C.paper, minHeight: "100vh" }}>
+        {showInstallBanner && <InstallBanner isIOS={isIOS} onInstallClick={triggerInstall} onDismiss={dismissInstallBanner} />}
         <div style={{ paddingBottom: 88 }}>{body}</div>
 
         <div className="fixed bottom-0 w-full max-w-md" style={{ background: C.cover }}>
@@ -1629,11 +1859,11 @@ export default function App() {
           </div>
         </div>
 
-        <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} expenseCategories={data.expenseCategories} onSaveIncome={addIncome} onSaveExpense={addExpense} onCreateTemplate={addTemplate} />
+        <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} expenseCategories={activeExpenseCategories} incomeCategories={data.incomeCategories} onSaveIncome={addIncome} onSaveExpense={addExpense} onCreateTemplate={addTemplate} />
 
         <Sheet open={!!editTx} onClose={() => setEditTx(null)} title={editTx?.tx ? "แก้ไขรายการ" : "เพิ่มรายการ"}>
           {editTx && (
-            <TxForm categories={editTx.kind === "income" ? INCOME_CATEGORIES : data.expenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)}
+            <TxForm categories={editTx.kind === "income" ? data.incomeCategories : activeExpenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)}
               onSave={(v) => {
                 if (editTx.kind === "income") { if (editTx.tx) updateIncome(editTx.tx.id, v); else addIncome(v); }
                 else { if (editTx.tx) updateExpense(editTx.tx.id, v); else addExpense(v); }
