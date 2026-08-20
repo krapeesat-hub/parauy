@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 /* ============================================================
-   บันทึกพารวย — V1 Prototype
+   บันทึกพารวย — V2 Standard
    Design language: Thai bank passbook (สมุดบัญชีธนาคาร)
    ============================================================ */
 
@@ -141,6 +141,7 @@ function buildSeed() {
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
     incomeCategories: DEFAULT_INCOME_CATEGORIES,
     inactiveExpenseCategories: [],
+    inactiveIncomeCategories: [],
     incomeTx, expenseTx, templates, schedules, budgets,
     settings: {},
   };
@@ -156,6 +157,7 @@ function buildEmptyData() {
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
     incomeCategories: DEFAULT_INCOME_CATEGORIES,
     inactiveExpenseCategories: [],
+    inactiveIncomeCategories: [],
     incomeTx: [],
     expenseTx: [],
     templates: [],
@@ -593,7 +595,7 @@ function AdminScreen({ go, donate, onOpenPreview, onLockAdmin, onLoadDemo }) {
 function GuideScreen({ go }) {
   const steps = [
     { title: "ตั้งเงินตั้งต้น", desc: "ไปที่ตั้งค่า → กรอกเงินคงเหลือปัจจุบันของคุณตอนเริ่มใช้แอป ใช้เป็นฐานคำนวณยอดเงินทั้งหมด", action: { label: "ไปตั้งค่า", go: "settings" } },
-    { title: "ตรวจสอบ/เพิ่มหมวดหมู่ค่าใช้จ่าย", desc: "แอปมีหมวดหมู่พื้นฐานให้แล้ว (อาหาร เดินทาง บ้าน ฯลฯ) ถ้าต้องการหมวดเพิ่มเติมเฉพาะตัว เพิ่มได้ที่นี่", action: { label: "ไปหมวดหมู่", go: "categories" } },
+    { title: "ตรวจสอบ/เพิ่ม หมวดหมู่ค่าใช้จ่าย-รายได้", desc: "แอปมีหมวดหมู่พื้นฐานให้แล้ว (อาหาร เดินทาง บ้าน ฯลฯ) ถ้าต้องการหมวดเพิ่มเติมเฉพาะตัว หรือปิดหมวดที่ไม่ได้ใช้ ทำได้ที่นี่", action: { label: "ไปหมวดหมู่", go: "categories" } },
     { title: "ตั้งงบประมาณรายเดือน (ถ้าต้องการ)", desc: "กำหนดวงเงินที่ตั้งใจใช้ต่อหมวดต่อเดือน แอปจะแจ้งเตือนเมื่อใกล้เต็มหรือเกินงบ ข้ามขั้นตอนนี้ได้ถ้ายังไม่พร้อม", action: { label: "ไปงบประมาณ", go: "budget" } },
     { title: "บันทึกรายรับ", desc: "กดปุ่ม + ตรงกลางแถบล่างสุด → เลือก \"รายรับ\" → กรอกวันที่ หมวดหมู่ จำนวนเงิน แล้วบันทึก", action: null },
     { title: "บันทึกรายจ่าย", desc: "กดปุ่ม + ตรงกลางแถบล่างสุด → เลือก \"รายจ่าย\" → กรอกข้อมูลแล้วบันทึก รายการนี้จะถือว่าจ่ายจริงทันที", action: null },
@@ -651,7 +653,7 @@ function AboutScreen({ go, onOpenDonate }) {
         <Heart size={16} fill={C.expense} /> สนับสนุนผู้พัฒนา
       </button>
 
-      <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, textAlign: "center" }}>บันทึกพารวย V1 · Local-only PWA</div>
+      <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, textAlign: "center" }}>บันทึกพารวย V2 Standard · Local-only PWA</div>
     </div>
   );
 }
@@ -725,7 +727,7 @@ function ProfileScreen({ go, profile, onSaveProfile, onLogout, stats }) {
 
 /* ---------------- Dashboard ---------------- */
 
-function Dashboard({ data, derived, go, profile, onSecretTap }) {
+function Dashboard({ data, derived, go, profile, onSecretTap, onOpenDonate }) {
   const tapRef = useRef({ count: 0, timer: null });
   const handleTitleTap = () => {
     const r = tapRef.current;
@@ -754,12 +756,17 @@ function Dashboard({ data, derived, go, profile, onSecretTap }) {
           <div style={{ fontFamily: DISPLAY_FONT, fontSize: 22, fontWeight: 700, color: C.ink }}>บันทึกพารวย</div>
           <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft }}>{thaiDateLong(todayStr)}</div>
         </div>
-        <button onClick={() => go("profile")} className="flex flex-col items-center gap-1">
-          <span className="rounded-full flex items-center justify-center text-lg" style={{ width: 40, height: 40, background: C.sage }}>
-            {profile.avatar}
-          </span>
-          <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft, maxWidth: 64, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</span>
-        </button>
+        <div className="flex items-start gap-3">
+          <button onClick={onOpenDonate} className="flex flex-col items-center gap-1" style={{ marginTop: 4 }} title="สนับสนุนผู้พัฒนา">
+            <Heart size={19} color={C.inkSoft} />
+          </button>
+          <button onClick={() => go("profile")} className="flex flex-col items-center gap-1">
+            <span className="rounded-full flex items-center justify-center text-lg" style={{ width: 40, height: 40, background: C.sage }}>
+              {profile.avatar}
+            </span>
+            <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft, maxWidth: 64, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</span>
+          </button>
+        </div>
       </div>
 
       <div className="rounded-2xl p-5 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${C.cover}, ${C.coverDeep})`, boxShadow: "0 8px 24px rgba(14,42,32,0.35)" }}>
@@ -1083,6 +1090,9 @@ function TemplatesScreen({ templates, schedules, go, setTplDetail, onDelete }) {
       {templates.length === 0 && (
         <Card style={{ padding: 24, textAlign: "center" }}><div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.inkSoft }}>ยังไม่มีแผนค่าใช้จ่าย</div></Card>
       )}
+      {templates.length > 0 && (
+        <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft }}>แตะที่การ์ดแผนด้านล่างเพื่อดูรายละเอียด กำหนดวัน หรือทำเครื่องหมายว่าจ่ายแล้ว</div>
+      )}
       {templates.map((tpl) => {
         const sc = schedules.filter((s) => s.templateId === tpl.id);
         const planned = sc.length;
@@ -1096,7 +1106,10 @@ function TemplatesScreen({ templates, schedules, go, setTplDetail, onDelete }) {
                   <div style={{ fontFamily: DISPLAY_FONT, fontSize: 15, fontWeight: 700, color: C.ink }}>{tpl.name}</div>
                   <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft }}>{tpl.category} • {tpl.type === "once" ? "ครั้งเดียว" : `หลายครั้ง (${tpl.amountPerOccurrence}/ครั้ง)`}</div>
                 </div>
-                <Money value={tpl.totalBudget} tone="gold" size={15} />
+                <div className="flex items-center gap-1">
+                  <Money value={tpl.totalBudget} tone="gold" size={15} />
+                  <ChevronRight size={16} color={C.inkSoft} />
+                </div>
               </div>
               <div className="mt-2 h-1.5 rounded-full" style={{ background: C.paperLine }}>
                 <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: C.gold }} />
@@ -1236,6 +1249,31 @@ function TemplateDetail({ template, schedules, go, onToggleDay, onSetStatus, onD
 
 /* ---------------- Budget screen ---------------- */
 
+function BudgetRow({ r, onSetBudget }) {
+  const [val, setVal] = useState(String(r.budget));
+  useEffect(() => { setVal(String(r.budget)); }, [r.budget]);
+  const toneColor = r.tone === "over" ? C.expense : r.tone === "full" ? C.gold : r.tone === "warning" ? C.warn : C.income;
+  const badge = r.tone === "over" ? "🔴 เกินงบ" : r.tone === "full" ? "🟡 เต็มงบ" : r.tone === "warning" ? "⚠️ ใกล้เต็มงบ" : "ปกติ";
+  return (
+    <Card style={{ padding: 14 }}>
+      <div className="flex justify-between items-center mb-1.5">
+        <span style={{ fontFamily: DISPLAY_FONT, fontSize: 14, fontWeight: 700, color: C.ink }}>{r.category}</span>
+        <span style={{ fontFamily: BODY_FONT, fontSize: 11, color: toneColor }}>{badge}</span>
+      </div>
+      <div className="h-2 rounded-full mb-1.5" style={{ background: C.paperLine }}>
+        <div className="h-2 rounded-full" style={{ width: `${Math.min(100, r.pct)}%`, background: toneColor }} />
+      </div>
+      <div className="flex justify-between items-center">
+        <span style={{ fontFamily: MONO_FONT, fontSize: 11, color: C.inkSoft }}>ใช้จริง {num(r.actual)} / {num(r.budget)} ({Math.round(r.pct)}%)</span>
+        <input type="number" value={val} onChange={(e) => setVal(e.target.value)} onBlur={(e) => onSetBudget(r.category, Number(e.target.value) || 0)} style={{ width: 88, ...inputStyle, padding: "5px 8px", fontSize: 12, textAlign: "right" }} />
+      </div>
+      {r.planned > 0 && (
+        <div style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.gold, marginTop: 4 }}>+ วางแผนไว้อีก {num(r.planned)} (ยังไม่จ่าย ไม่นับในยอดใช้จริง)</div>
+      )}
+    </Card>
+  );
+}
+
 function BudgetScreen({ go, budgetRows, onSetBudget, monthNav }) {
   return (
     <div className="px-4 pt-5 pb-4 space-y-3">
@@ -1244,25 +1282,7 @@ function BudgetScreen({ go, budgetRows, onSetBudget, monthNav }) {
         <div style={{ fontFamily: DISPLAY_FONT, fontSize: 20, fontWeight: 700, color: C.ink, flex: 1 }}>งบประมาณรายเดือน</div>
       </div>
       <div className="flex justify-end"><MonthNav {...monthNav} /></div>
-      {budgetRows.map((r) => {
-        const toneColor = r.tone === "over" ? C.expense : r.tone === "warning" ? C.warn : C.income;
-        const badge = r.tone === "over" ? "🔴 เกินงบ" : r.tone === "warning" ? "⚠️ ใกล้เต็มงบ" : "ปกติ";
-        return (
-          <Card key={r.category} style={{ padding: 14 }}>
-            <div className="flex justify-between items-center mb-1.5">
-              <span style={{ fontFamily: DISPLAY_FONT, fontSize: 14, fontWeight: 700, color: C.ink }}>{r.category}</span>
-              <span style={{ fontFamily: BODY_FONT, fontSize: 11, color: toneColor }}>{badge}</span>
-            </div>
-            <div className="h-2 rounded-full mb-1.5" style={{ background: C.paperLine }}>
-              <div className="h-2 rounded-full" style={{ width: `${Math.min(100, r.pct)}%`, background: toneColor }} />
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ fontFamily: MONO_FONT, fontSize: 11, color: C.inkSoft }}>ใช้จริง {num(r.actual)} / {num(r.budget)} ({Math.round(r.pct)}%)</span>
-              <input type="number" defaultValue={r.budget} onBlur={(e) => onSetBudget(r.category, Number(e.target.value) || 0)} style={{ width: 88, ...inputStyle, padding: "5px 8px", fontSize: 12, textAlign: "right" }} />
-            </div>
-          </Card>
-        );
-      })}
+      {budgetRows.map((r) => <BudgetRow key={r.category} r={r} onSetBudget={onSetBudget} />)}
     </div>
   );
 }
@@ -1270,7 +1290,8 @@ function BudgetScreen({ go, budgetRows, onSetBudget, monthNav }) {
 /* ---------------- Report screen ---------------- */
 
 function ReportScreen({ stats, monthNav }) {
-  const maxAmt = Math.max(1, ...stats.breakdown.map((b) => b.amount));
+  const rows = [...stats.budgetRows].filter((r) => r.actual > 0 || r.budget > 0).sort((a, b) => b.actual - a.actual);
+  const maxAmt = Math.max(1, ...rows.map((r) => Math.max(r.actual, r.budget)));
   return (
     <div className="px-4 pt-5 pb-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -1284,16 +1305,29 @@ function ReportScreen({ stats, monthNav }) {
         <div className="flex justify-between pt-2"><span style={{ fontFamily: BODY_FONT, color: C.goldBright, fontSize: 13, fontWeight: 600 }}>คงเหลือ</span><span style={{ fontFamily: MONO_FONT, color: C.paper, fontSize: 16, fontWeight: 700 }}>{num(stats.monthIncome - stats.monthExpense)}</span></div>
       </Card>
       <Card style={{ padding: 16 }}>
-        <SectionLabel>แยกตามหมวดหมู่</SectionLabel>
-        <div className="space-y-2.5">
-          {stats.breakdown.map((b) => (
-            <div key={b.category}>
-              <div className="flex justify-between mb-1"><span style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.ink }}>{b.category}</span><Money value={b.amount} tone="expense" size={12} /></div>
-              <div className="h-1.5 rounded-full" style={{ background: C.paperLine }}><div className="h-1.5 rounded-full" style={{ width: `${(b.amount / maxAmt) * 100}%`, background: C.gold }} /></div>
+        <SectionLabel>แยกตามหมวดหมู่ — ใช้จริง เทียบ งบประมาณ</SectionLabel>
+        <div className="space-y-3">
+          {rows.map((r) => (
+            <div key={r.category}>
+              <div className="flex justify-between items-baseline mb-1">
+                <span style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.ink }}>{r.category}</span>
+                <span style={{ fontFamily: MONO_FONT, fontSize: 12, color: C.ink }}>
+                  {num(r.actual)}{r.budget > 0 ? ` / ${num(r.budget)}` : ""}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full relative" style={{ background: C.paperLine }}>
+                <div className="h-1.5 rounded-full" style={{ width: `${(r.actual / maxAmt) * 100}%`, background: r.tone === "over" ? C.expense : C.gold }} />
+                {r.budget > 0 && (
+                  <div className="absolute top-0" style={{ left: `${Math.min(100, (r.budget / maxAmt) * 100)}%`, width: 2, height: "100%", background: C.ink, opacity: 0.35 }} />
+                )}
+              </div>
             </div>
           ))}
-          {stats.breakdown.length === 0 && <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.inkSoft }}>ไม่มีรายจ่ายในเดือนนี้</div>}
+          {rows.length === 0 && <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.inkSoft }}>ไม่มีรายจ่ายในเดือนนี้</div>}
         </div>
+        {rows.some((r) => r.budget > 0) && (
+          <div style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft, marginTop: 10 }}>เส้นแนวตั้งบนแท่ง = จุดงบประมาณที่ตั้งไว้</div>
+        )}
       </Card>
     </div>
   );
@@ -1309,12 +1343,13 @@ function ToggleSwitch({ checked, onChange }) {
   );
 }
 
-function CategoryScreen({ go, expenseCategories, inactiveExpenseCategories, incomeCategories, onAddExpense, onDeleteExpense, onToggleExpenseActive, onAddIncome, onDeleteIncome }) {
+function CategoryScreen({ go, expenseCategories, inactiveExpenseCategories, incomeCategories, inactiveIncomeCategories, onAddExpense, onDeleteExpense, onToggleExpenseActive, onAddIncome, onDeleteIncome, onToggleIncomeActive }) {
   const [tab, setTab] = useState("expense");
   const [name, setName] = useState("");
   const defaultsExpense = new Set(DEFAULT_EXPENSE_CATEGORIES);
   const defaultsIncome = new Set(DEFAULT_INCOME_CATEGORIES);
   const inactiveSet = new Set(inactiveExpenseCategories);
+  const inactiveIncomeSet = new Set(inactiveIncomeCategories);
 
   const add = () => {
     if (!name.trim()) return;
@@ -1363,18 +1398,27 @@ function CategoryScreen({ go, expenseCategories, inactiveExpenseCategories, inco
           </Card>
         </>
       ) : (
-        <Card style={{ padding: 8 }}>
-          {incomeCategories.map((c) => (
-            <div key={c} className="flex items-center justify-between px-3 py-2.5" style={{ borderBottom: `1px solid ${C.paperLine}` }}>
-              <div className="flex items-center gap-2">
-                <Tag size={14} color={C.gold} />
-                <span style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}>{c}</span>
-                {defaultsIncome.has(c) && <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft }}>(พื้นฐาน)</span>}
-              </div>
-              {!defaultsIncome.has(c) && <IconBtn icon={Trash2} tone="expense" onClick={() => onDeleteIncome(c)} />}
-            </div>
-          ))}
-        </Card>
+        <>
+          <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft }}>ปิดสวิตช์หมวดที่ไม่ได้ใช้ เพื่อไม่ให้แสดงเป็นตัวเลือกตอนบันทึกรายรับ</div>
+          <Card style={{ padding: 8 }}>
+            {incomeCategories.map((c) => {
+              const active = !inactiveIncomeSet.has(c);
+              return (
+                <div key={c} className="flex items-center justify-between px-3 py-2.5" style={{ borderBottom: `1px solid ${C.paperLine}`, opacity: active ? 1 : 0.5 }}>
+                  <div className="flex items-center gap-2">
+                    <Tag size={14} color={C.gold} />
+                    <span style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}>{c}</span>
+                    {defaultsIncome.has(c) && <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.inkSoft }}>(พื้นฐาน)</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ToggleSwitch checked={active} onChange={() => onToggleIncomeActive(c)} />
+                    {!defaultsIncome.has(c) && <IconBtn icon={Trash2} tone="expense" onClick={() => onDeleteIncome(c)} />}
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+        </>
       )}
     </div>
   );
@@ -1442,7 +1486,7 @@ function SettingsScreen({ go, openingBalance, onSetOpening, onReset, onExport, o
         <button onClick={onReset} className="w-full py-3 rounded-xl" style={{ border: `1px solid ${C.expense}`, color: C.expense, fontFamily: BODY_FONT, fontSize: 13, fontWeight: 600 }}>ลบข้อมูลทั้งหมด เริ่มต้นใหม่</button>
       </Card>
 
-      <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, textAlign: "center" }}>บันทึกพารวย V1 · Prototype</div>
+      <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, textAlign: "center" }}>บันทึกพารวย V2 Standard</div>
     </div>
   );
 }
@@ -1679,6 +1723,11 @@ export default function App() {
     return { ...d, inactiveExpenseCategories: Array.from(inactive) };
   });
   const addIncomeCategory = (name) => setData((d) => (d.incomeCategories.includes(name) ? d : { ...d, incomeCategories: [...d.incomeCategories, name] }));
+  const toggleIncomeCategoryActive = (name) => setData((d) => {
+    const inactive = new Set(d.inactiveIncomeCategories || []);
+    if (inactive.has(name)) inactive.delete(name); else inactive.add(name);
+    return { ...d, inactiveIncomeCategories: Array.from(inactive) };
+  });
   const deleteIncomeCategory = (name) => requestConfirm(`ลบหมวดหมู่ "${name}"?`, () => setData((d) => ({ ...d, incomeCategories: d.incomeCategories.filter((c) => c !== name) })));
   const setBudget = (category, amount) => setData((d) => ({ ...d, budgets: { ...d.budgets, [category]: amount } }));
   const setOpeningBalance = (v) => setData((d) => ({ ...d, openingBalance: v }));
@@ -1710,6 +1759,11 @@ export default function App() {
     return data.expenseCategories.filter((c) => !inactive.has(c));
   }, [data.expenseCategories, data.inactiveExpenseCategories]);
 
+  const activeIncomeCategories = useMemo(() => {
+    const inactive = new Set(data.inactiveIncomeCategories || []);
+    return data.incomeCategories.filter((c) => !inactive.has(c));
+  }, [data.incomeCategories, data.inactiveIncomeCategories]);
+
   const monthStats = useCallback((y, m) => {
     const mk = dstr(y, m, 1).slice(0, 7);
     const monthIncome = data.incomeTx.filter((t) => monthKey(t.date) === mk).reduce((s, t) => s + t.amount, 0);
@@ -1717,16 +1771,31 @@ export default function App() {
     const byCat = {};
     data.expenseTx.filter((t) => monthKey(t.date) === mk).forEach((t) => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
     const breakdown = Object.entries(byCat).map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
+
+    const tplCategoryById = {};
+    data.templates.forEach((t) => { tplCategoryById[t.id] = t.category; });
+    const plannedByCat = {};
+    data.schedules.filter((s) => s.status === "planned" && monthKey(s.date) === mk).forEach((s) => {
+      const cat = tplCategoryById[s.templateId];
+      if (cat) plannedByCat[cat] = (plannedByCat[cat] || 0) + s.amount;
+    });
+
     const allCats = new Set(activeExpenseCategories);
     const budgetRows = Array.from(allCats).map((category) => {
       const budget = data.budgets[category] || 0;
       const actual = byCat[category] || 0;
+      const planned = plannedByCat[category] || 0;
       const pct = budget > 0 ? (actual / budget) * 100 : (actual > 0 ? 100 : 0);
-      const tone = budget > 0 ? (pct > 100 ? "over" : pct >= 80 ? "warning" : "normal") : (actual > 0 ? "warning" : "normal");
-      return { category, budget, actual, pct, tone };
+      let tone;
+      if (budget <= 0) tone = actual > 0 ? "warning" : "normal";
+      else if (actual > budget) tone = "over";
+      else if (actual === budget) tone = "full";
+      else if (pct >= 80) tone = "warning";
+      else tone = "normal";
+      return { category, budget, actual, planned, pct, tone };
     }).sort((a, b) => b.pct - a.pct);
     return { monthIncome, monthExpense, breakdown, budgetRows };
-  }, [data]);
+  }, [data, activeExpenseCategories]);
 
   const derived = useMemo(() => {
     const totalIncome = data.incomeTx.reduce((s, t) => s + t.amount, 0);
@@ -1786,14 +1855,14 @@ export default function App() {
   );
 
   let body;
-  if (screen === "dashboard") body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} />;
+  if (screen === "dashboard") body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} onOpenDonate={() => setDonateOpen(true)} />;
   else if (screen === "calendar") body = (
-    <CalendarScreen data={data} expenseCategories={activeExpenseCategories} incomeCategories={data.incomeCategories}
+    <CalendarScreen data={data} expenseCategories={activeExpenseCategories} incomeCategories={activeIncomeCategories}
       onAddIncome={addIncome} onAddExpense={addExpense} onUpdateIncome={updateIncome} onUpdateExpense={updateExpense}
       onDeleteIncome={deleteIncome} onDeleteExpense={deleteExpense} />
   );
   else if (screen === "income") body = (
-    <TxListScreen title="รายรับ" tone="income" txs={data.incomeTx} categories={data.incomeCategories} go={go}
+    <TxListScreen title="รายรับ" tone="income" txs={data.incomeTx} categories={activeIncomeCategories} go={go}
       onAdd={() => setEditTx({ kind: "income", tx: null })} onEdit={(tx) => setEditTx({ kind: "income", tx })} onDelete={deleteIncome} />
   );
   else if (screen === "expense") body = (
@@ -1816,9 +1885,9 @@ export default function App() {
   else if (screen === "budget") body = <BudgetScreen go={go} budgetRows={reportStats.budgetRows} onSetBudget={setBudget} monthNav={monthNavProps} />;
   else if (screen === "report") body = <ReportScreen stats={reportStats} monthNav={monthNavProps} />;
   else if (screen === "categories") body = (
-    <CategoryScreen go={go} expenseCategories={data.expenseCategories} inactiveExpenseCategories={data.inactiveExpenseCategories || []} incomeCategories={data.incomeCategories}
+    <CategoryScreen go={go} expenseCategories={data.expenseCategories} inactiveExpenseCategories={data.inactiveExpenseCategories || []} incomeCategories={data.incomeCategories} inactiveIncomeCategories={data.inactiveIncomeCategories || []}
       onAddExpense={addCategory} onDeleteExpense={deleteCategory} onToggleExpenseActive={toggleExpenseCategoryActive}
-      onAddIncome={addIncomeCategory} onDeleteIncome={deleteIncomeCategory} />
+      onAddIncome={addIncomeCategory} onDeleteIncome={deleteIncomeCategory} onToggleIncomeActive={toggleIncomeCategoryActive} />
   );
   else if (screen === "profile") body = (
     <ProfileScreen go={go} profile={profile} onSaveProfile={saveProfile} onLogout={logout} stats={profileStats} />
@@ -1830,7 +1899,7 @@ export default function App() {
       profile={profile} onUpdatePin={(pin) => saveProfile({ ...profile, pin })} />
   );
   else if (screen === "about") body = <AboutScreen go={go} onOpenDonate={() => setDonateOpen(true)} />;
-  else body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} />;
+  else body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} onOpenDonate={() => setDonateOpen(true)} />;
 
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: C.sage, fontFamily: BODY_FONT }}>
@@ -1859,11 +1928,11 @@ export default function App() {
           </div>
         </div>
 
-        <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} expenseCategories={activeExpenseCategories} incomeCategories={data.incomeCategories} onSaveIncome={addIncome} onSaveExpense={addExpense} onCreateTemplate={addTemplate} />
+        <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} expenseCategories={activeExpenseCategories} incomeCategories={activeIncomeCategories} onSaveIncome={addIncome} onSaveExpense={addExpense} onCreateTemplate={addTemplate} />
 
         <Sheet open={!!editTx} onClose={() => setEditTx(null)} title={editTx?.tx ? "แก้ไขรายการ" : "เพิ่มรายการ"}>
           {editTx && (
-            <TxForm categories={editTx.kind === "income" ? data.incomeCategories : activeExpenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)}
+            <TxForm categories={editTx.kind === "income" ? activeIncomeCategories : activeExpenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)}
               onSave={(v) => {
                 if (editTx.kind === "income") { if (editTx.tx) updateIncome(editTx.tx.id, v); else addIncome(v); }
                 else { if (editTx.tx) updateExpense(editTx.tx.id, v); else addExpense(v); }
