@@ -856,7 +856,7 @@ function Dashboard({ data, derived, go, profile, onSecretTap, onOpenDonate }) {
 
 /* ---------------- Calendar (main) ---------------- */
 
-function CalendarScreen({ data, expenseCategories, incomeCategories, onAddIncome, onAddExpense, onUpdateIncome, onUpdateExpense, onDeleteIncome, onDeleteExpense }) {
+function CalendarScreen({ data, expenseCategories, incomeCategories, onAddIncome, onAddExpense, onUpdateIncome, onUpdateExpense, onDeleteIncome, onDeleteExpense, pendingSchedules }) {
   const [year, setYear] = useState(SEED_YEAR);
   const [month, setMonth] = useState(SEED_MONTH);
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -948,7 +948,7 @@ function CalendarScreen({ data, expenseCategories, incomeCategories, onAddIncome
           <TxForm categories={incomeCategories} initial={{ date: selectedDate, category: incomeCategories[0], amount: "", note: "" }} onCancel={closeAdd} onSave={(v) => { onAddIncome(v); closeAdd(); }} />
         )}
         {addMode === "expense" && (
-          <TxForm categories={expenseCategories} initial={{ date: selectedDate, category: expenseCategories[0], amount: "", note: "" }} onCancel={closeAdd} onSave={(v) => { onAddExpense(v); closeAdd(); }} />
+          <TxForm categories={expenseCategories} initial={{ date: selectedDate, category: expenseCategories[0], amount: "", note: "" }} onCancel={closeAdd} onSave={(v) => { onAddExpense(v); closeAdd(); }} pendingSchedules={pendingSchedules} />
         )}
       </Sheet>
 
@@ -1041,12 +1041,30 @@ function TxListScreen({ title, tone, txs, categories, onAdd, onEdit, onDelete, g
   );
 }
 
-function TxForm({ categories, initial, onSave, onCancel }) {
+function TxForm({ categories, initial, onSave, onCancel, pendingSchedules }) {
   const [date, setDate] = useState(initial?.date || todayStr);
   const [category, setCategory] = useState(initial?.category || categories[0]);
   const [amount, setAmount] = useState(initial?.amount ?? "");
   const [note, setNote] = useState(initial?.note || "");
+  const [linkScheduleId, setLinkScheduleId] = useState("");
   const options = initial?.category && !categories.includes(initial.category) ? [initial.category, ...categories] : categories;
+
+  const matchingSchedules = useMemo(() => {
+    if (!pendingSchedules) return [];
+    return pendingSchedules.filter((p) => p.category === category);
+  }, [pendingSchedules, category]);
+
+  useEffect(() => { setLinkScheduleId(""); }, [category]);
+
+  const pickSchedule = (id) => {
+    setLinkScheduleId(id);
+    const match = matchingSchedules.find((p) => p.schedule.id === id);
+    if (match) {
+      setAmount(String(match.schedule.amount));
+      setDate(match.schedule.date);
+    }
+  };
+
   return (
     <div>
       <Field label="วันที่"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} /></Field>
@@ -1055,12 +1073,27 @@ function TxForm({ categories, initial, onSave, onCancel }) {
           {options.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
+      {!initial?.id && matchingSchedules.length > 0 && (
+        <Field label="เชื่อมกับแผนค่าใช้จ่าย (ถ้ามี)">
+          <select value={linkScheduleId} onChange={(e) => pickSchedule(e.target.value)} style={inputStyle}>
+            <option value="">ไม่เชื่อมกับแผน — บันทึกแยก</option>
+            {matchingSchedules.map((p) => (
+              <option key={p.schedule.id} value={p.schedule.id}>
+                {p.templateName} · {thaiDateLong(p.schedule.date)} · {num(p.schedule.amount)} บาท
+              </option>
+            ))}
+          </select>
+          {linkScheduleId && (
+            <div style={{ fontFamily: BODY_FONT, fontSize: 10, color: C.gold, marginTop: 4 }}>รายการนี้จะถูกนับเป็นการจ่ายของแผนที่เลือก และจะขึ้นสถานะ "จ่ายแล้ว" ในหน้าแผนค่าใช้จ่ายให้อัตโนมัติ</div>
+          )}
+        </Field>
+      )}
       <Field label="จำนวนเงิน (บาท)"><input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} placeholder="0" /></Field>
       <Field label="หมายเหตุ (ถ้ามี)"><input type="text" value={note} onChange={(e) => setNote(e.target.value)} style={inputStyle} /></Field>
       <div className="flex gap-2 mt-2">
         <button onClick={onCancel} className="flex-1 py-3 rounded-xl" style={{ border: `1px solid ${C.paperLine}`, fontFamily: BODY_FONT, fontSize: 14, color: C.inkSoft }}>ยกเลิก</button>
         <div className="flex-[2]">
-          <PrimaryBtn disabled={!amount || Number(amount) <= 0} onClick={() => onSave({ date, category, amount: Number(amount), note })}>บันทึก</PrimaryBtn>
+          <PrimaryBtn disabled={!amount || Number(amount) <= 0} onClick={() => onSave(pendingSchedules ? { date, category, amount: Number(amount), note, linkScheduleId: linkScheduleId || null } : { date, category, amount: Number(amount), note })}>บันทึก</PrimaryBtn>
         </div>
       </div>
     </div>
@@ -1483,7 +1516,7 @@ function SettingsScreen({ go, openingBalance, onSetOpening, onReset, onExport, o
 
 /* ---------------- Quick Add sheet ---------------- */
 
-function QuickAddSheet({ open, onClose, expenseCategories, incomeCategories, onSaveIncome, onSaveExpense, onCreateTemplate }) {
+function QuickAddSheet({ open, onClose, expenseCategories, incomeCategories, onSaveIncome, onSaveExpense, onCreateTemplate, pendingSchedules }) {
   const [mode, setMode] = useState(null);
   useEffect(() => { if (!open) setMode(null); }, [open]);
   return (
@@ -1502,7 +1535,7 @@ function QuickAddSheet({ open, onClose, expenseCategories, incomeCategories, onS
         </div>
       )}
       {mode === "income" && <TxForm categories={incomeCategories} onCancel={() => setMode(null)} onSave={(v) => { onSaveIncome(v); onClose(); }} />}
-      {mode === "expense" && <TxForm categories={expenseCategories} onCancel={() => setMode(null)} onSave={(v) => { onSaveExpense(v); onClose(); }} />}
+      {mode === "expense" && <TxForm categories={expenseCategories} onCancel={() => setMode(null)} onSave={(v) => { onSaveExpense(v); onClose(); }} pendingSchedules={pendingSchedules} />}
       {mode === "template" && <TemplateForm categories={expenseCategories} onCancel={() => setMode(null)} onSave={(v) => { onCreateTemplate(v); onClose(); }} />}
     </Sheet>
   );
@@ -1643,6 +1676,21 @@ export default function App() {
   const deleteIncome = (tx) => requestConfirm(`ลบรายรับ "${tx.category}" ${thb(tx.amount)}?`, () => setData((d) => ({ ...d, incomeTx: d.incomeTx.filter((t) => t.id !== tx.id) })));
 
   const addExpense = (tx) => setData((d) => ({ ...d, expenseTx: [...d.expenseTx, { id: uid("tx"), templateId: null, scheduleId: null, ...tx }] }));
+  const addExpenseWithLink = (v) => {
+    const { linkScheduleId, ...tx } = v;
+    if (!linkScheduleId) { addExpense(tx); return; }
+    setData((d) => {
+      const schedule = d.schedules.find((s) => s.id === linkScheduleId);
+      if (!schedule || schedule.status === "paid") return { ...d, expenseTx: [...d.expenseTx, { id: uid("tx"), templateId: null, scheduleId: null, ...tx }] };
+      const txId = uid("tx");
+      const newTx = { id: txId, date: tx.date, category: tx.category, amount: tx.amount, note: tx.note, templateId: schedule.templateId, scheduleId: schedule.id };
+      return {
+        ...d,
+        expenseTx: [...d.expenseTx, newTx],
+        schedules: d.schedules.map((s) => (s.id === schedule.id ? { ...s, status: "paid", txId } : s)),
+      };
+    });
+  };
   const updateExpense = (id, patch) => setData((d) => ({ ...d, expenseTx: d.expenseTx.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
   const deleteExpense = (tx) => requestConfirm(`ลบรายจ่าย "${tx.category}" ${thb(tx.amount)}?`, () => setData((d) => {
     let schedules = d.schedules;
@@ -1752,6 +1800,15 @@ export default function App() {
     return data.incomeCategories.filter((c) => !inactive.has(c));
   }, [data.incomeCategories, data.inactiveIncomeCategories]);
 
+  const pendingSchedules = useMemo(() => {
+    const tplById = {};
+    data.templates.forEach((t) => { tplById[t.id] = t; });
+    return data.schedules
+      .filter((s) => s.status === "planned" && tplById[s.templateId])
+      .map((s) => ({ schedule: s, templateName: tplById[s.templateId].name, category: tplById[s.templateId].category }))
+      .sort((a, b) => a.schedule.date.localeCompare(b.schedule.date));
+  }, [data.schedules, data.templates]);
+
   const monthStats = useCallback((y, m) => {
     const mk = dstr(y, m, 1).slice(0, 7);
     const monthIncome = data.incomeTx.filter((t) => monthKey(t.date) === mk).reduce((s, t) => s + t.amount, 0);
@@ -1846,8 +1903,8 @@ export default function App() {
   if (screen === "dashboard") body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} onOpenDonate={() => setDonateOpen(true)} />;
   else if (screen === "calendar") body = (
     <CalendarScreen data={data} expenseCategories={activeExpenseCategories} incomeCategories={activeIncomeCategories}
-      onAddIncome={addIncome} onAddExpense={addExpense} onUpdateIncome={updateIncome} onUpdateExpense={updateExpense}
-      onDeleteIncome={deleteIncome} onDeleteExpense={deleteExpense} />
+      onAddIncome={addIncome} onAddExpense={addExpenseWithLink} onUpdateIncome={updateIncome} onUpdateExpense={updateExpense}
+      onDeleteIncome={deleteIncome} onDeleteExpense={deleteExpense} pendingSchedules={pendingSchedules} />
   );
   else if (screen === "income") body = (
     <TxListScreen title="รายรับ" tone="income" txs={data.incomeTx} categories={activeIncomeCategories} go={go}
@@ -1916,14 +1973,14 @@ export default function App() {
           </div>
         </div>
 
-        <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} expenseCategories={activeExpenseCategories} incomeCategories={activeIncomeCategories} onSaveIncome={addIncome} onSaveExpense={addExpense} onCreateTemplate={addTemplate} />
+        <QuickAddSheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} expenseCategories={activeExpenseCategories} incomeCategories={activeIncomeCategories} onSaveIncome={addIncome} onSaveExpense={addExpenseWithLink} onCreateTemplate={addTemplate} pendingSchedules={pendingSchedules} />
 
         <Sheet open={!!editTx} onClose={() => setEditTx(null)} title={editTx?.tx ? "แก้ไขรายการ" : "เพิ่มรายการ"}>
           {editTx && (
-            <TxForm categories={editTx.kind === "income" ? activeIncomeCategories : activeExpenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)}
+            <TxForm categories={editTx.kind === "income" ? activeIncomeCategories : activeExpenseCategories} initial={editTx.tx} onCancel={() => setEditTx(null)} pendingSchedules={pendingSchedules}
               onSave={(v) => {
                 if (editTx.kind === "income") { if (editTx.tx) updateIncome(editTx.tx.id, v); else addIncome(v); }
-                else { if (editTx.tx) updateExpense(editTx.tx.id, v); else addExpense(v); }
+                else { if (editTx.tx) updateExpense(editTx.tx.id, v); else addExpenseWithLink(v); }
                 setEditTx(null);
               }} />
           )}
