@@ -34,6 +34,17 @@ npm run build
 
 แอปจะเปิดแบบเต็มจอเหมือนแอปจริง มีไอคอนของตัวเอง และใช้งานได้แม้ไม่มีเน็ต (offline) เพราะมี service worker แคชไฟล์ไว้ให้แล้ว
 
+## About / Donate — ข้อมูลกลาง (ไม่ใช่ local)
+
+ต่างจากข้อมูลการเงินของ user (local-only) หน้า "เกี่ยวกับแอปนี้" และ Donate ดึงข้อมูลจาก **Supabase** เพื่อให้แก้ไขได้จากที่เดียวแล้วทุกเครื่องเห็นตรงกัน:
+
+1. รันไฟล์ `supabase-setup.sql` ใน Supabase Dashboard → SQL Editor
+2. คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ `VITE_SUPABASE_URL` และ `VITE_SUPABASE_ANON_KEY`
+3. ตั้งค่า Environment Variables เดียวกันนี้บน Vercel ด้วย (Project Settings → Environment Variables) ไม่งั้นตอน build บน Vercel จะไม่มีค่าเหล่านี้
+4. แก้ไขเนื้อหาผ่านแอปแยก **parauy-admin** (ส่งมาให้พร้อมกัน) ไม่ใช่แก้ในแอปนี้
+
+ถ้าไม่ตั้งค่า Supabase หรือออฟไลน์ แอปจะ fallback ไปใช้ค่าที่แคชไว้ล่าสุด หรือค่าเริ่มต้นในโค้ด — ไม่มีวันพังหรือค้าง
+
 ## ข้อมูล — เก็บที่ไหน สำรองยังไง
 
 - ข้อมูลอยู่ใน `localStorage` ของเบราว์เซอร์ **เฉพาะเครื่อง/เบราว์เซอร์นั้น** ไม่ sync ข้ามอุปกรณ์

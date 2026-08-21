@@ -5,6 +5,7 @@ import {
   AlertTriangle, Tag, Layers, Undo2, BarChart3, Receipt, ArrowLeft, User,
   Heart, Download, Upload, LogOut, Lock, ShieldCheck, Copy, ExternalLink, HelpCircle,
 } from "lucide-react";
+import { fetchAboutConfig } from "./aboutConfig.js";
 
 /* ============================================================
    บันทึกพารวย — V2 Standard
@@ -81,6 +82,15 @@ const DONATE_INFO = {
   promptpay: "",  // TODO: ใส่เบอร์โทร/เลขบัตร ปชช. ที่ผูก PromptPay
   link: "",       // TODO: ลิงก์สนับสนุนอื่น เช่น buymeacoffee (ถ้ามี)
 };
+
+/**
+ * รหัสเข้าพื้นที่ผู้ดูแลระบบ — ฝังเป็นค่าคงที่เดียวกันทุกเครื่อง (เหตุผลเดียวกับ
+ * DONATE_INFO ด้านบน) เพราะแอปเป็น local-only ไม่มีฐานข้อมูลกลางให้เช็ครหัส
+ * การให้แต่ละเครื่อง "ตั้งรหัสเอง" จึงไม่มีความหมาย — ใช้รหัสคงที่นี้แทน
+ */
+const ADMIN_ACCESS_CODE = "546287";
+
+const DEFAULT_ABOUT_TEXT = "แอปนี้พัฒนาขึ้นเพื่อช่วยให้การบันทึกรายรับ-รายจ่ายเป็นเรื่องง่าย เก็บข้อมูลไว้บนเครื่องของคุณเองทั้งหมด ไม่มีการส่งข้อมูลการเงินของคุณไปที่ไหน หากแอปนี้มีประโยชน์กับคุณ สามารถสนับสนุนผู้พัฒนาได้ตามกำลังครับ 🙏";
 
 function buildSeed() {
   const todayDay = todayObj.getDate();
@@ -169,7 +179,6 @@ function buildEmptyData() {
 
 const DATA_KEY = "banthuek-parauy-v1";
 const PROFILE_KEY = "banthuek-parauy-profile-v1";
-const ADMIN_KEY = "banthuek-parauy-admin-v1";
 
 /* ---------------- small UI atoms ---------------- */
 
@@ -495,16 +504,10 @@ function DonateSheet({ open, onClose, donate, isOwnerView, go }) {
 
 /* ---------------- Hidden admin (owner-only) ---------------- */
 
-function AdminGateScreen({ hasAdminPin, onUnlock, onCreate, go }) {
+function AdminGateScreen({ onUnlock, go }) {
   const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
 
-  const submitCreate = () => {
-    if (pin.length !== 6) { setError("รหัสต้องมี 6 หลัก"); return; }
-    if (pin !== confirmPin) { setError("รหัสยืนยันไม่ตรงกัน"); return; }
-    onCreate(pin);
-  };
   const submitUnlock = () => {
     if (!onUnlock(pin)) setError("รหัสไม่ถูกต้อง");
   };
@@ -514,32 +517,15 @@ function AdminGateScreen({ hasAdminPin, onUnlock, onCreate, go }) {
       <div className="w-full max-w-sm">
         <div className="text-center mb-5">
           <ShieldCheck size={30} color={C.goldBright} className="mx-auto mb-2" />
-          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 17, fontWeight: 700, color: C.paper }}>
-            {hasAdminPin ? "พื้นที่ผู้ดูแลระบบ" : "ตั้งรหัสผ่านผู้ดูแลระบบ"}
-          </div>
+          <div style={{ fontFamily: DISPLAY_FONT, fontSize: 17, fontWeight: 700, color: C.paper }}>พื้นที่ผู้ดูแลระบบ</div>
           <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.goldBright }}>สำหรับผู้พัฒนาแอปเท่านั้น</div>
         </div>
         <div className="rounded-2xl p-5" style={{ background: C.paper }}>
-          {hasAdminPin ? (
-            <>
-              <Field label="รหัสผ่านผู้ดูแล 6 หลัก">
-                <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
-              </Field>
-              {error && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense, marginBottom: 8 }}>{error}</div>}
-              <PrimaryBtn onClick={submitUnlock} disabled={pin.length !== 6}>เข้าสู่ระบบผู้ดูแล</PrimaryBtn>
-            </>
-          ) : (
-            <>
-              <Field label="ตั้งรหัสผ่านผู้ดูแล 6 หลัก">
-                <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
-              </Field>
-              <Field label="ยืนยันรหัสผ่านอีกครั้ง">
-                <input value={confirmPin} onChange={(e) => { setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
-              </Field>
-              {error && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense, marginBottom: 8 }}>{error}</div>}
-              <PrimaryBtn onClick={submitCreate} disabled={pin.length !== 6}>ตั้งรหัสผ่าน</PrimaryBtn>
-            </>
-          )}
+          <Field label="รหัสผ่านผู้ดูแล 6 หลัก">
+            <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }} type="password" inputMode="numeric" autoComplete="off" style={{ ...inputStyle, textAlign: "center", letterSpacing: "0.4em" }} placeholder="••••••" />
+          </Field>
+          {error && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense, marginBottom: 8 }}>{error}</div>}
+          <PrimaryBtn onClick={submitUnlock} disabled={pin.length !== 6}>เข้าสู่ระบบผู้ดูแล</PrimaryBtn>
           <button onClick={() => go("dashboard")} className="w-full mt-3 py-2 text-center" style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft }}>ยกเลิก กลับหน้าหลัก</button>
         </div>
       </div>
@@ -547,7 +533,7 @@ function AdminGateScreen({ hasAdminPin, onUnlock, onCreate, go }) {
   );
 }
 
-function AdminScreen({ go, donate, onOpenPreview, onLockAdmin, onLoadDemo }) {
+function AdminScreen({ go, donate, isLive, onOpenPreview, onLockAdmin, onLoadDemo }) {
   const hasChannel = donate.promptpay || donate.link;
   return (
     <div className="px-4 pt-5 pb-4 space-y-4">
@@ -560,10 +546,15 @@ function AdminScreen({ go, donate, onOpenPreview, onLockAdmin, onLoadDemo }) {
         <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.warn }}>หน้านี้ผู้ใช้ทั่วไปมองไม่เห็นและเข้าไม่ถึง</div>
       </Card>
       <Card style={{ padding: 16 }}>
-        <SectionLabel>ช่องทางรับการสนับสนุน (Donate)</SectionLabel>
+        <div className="flex items-center justify-between mb-2">
+          <SectionLabel>ช่องทางรับการสนับสนุน (Donate)</SectionLabel>
+          <span style={{ fontFamily: BODY_FONT, fontSize: 10, color: isLive ? C.income : C.inkSoft }}>
+            {isLive ? "● ข้อมูลสด (Supabase)" : "○ ใช้ค่าสำรอง/แคช"}
+          </span>
+        </div>
         <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, lineHeight: 1.7, marginBottom: 10 }}>
-          ข้อมูลนี้ฝังอยู่ใน<b>ซอร์สโค้ด</b> (ค่าคงที่ <code>DONATE_INFO</code>) ไม่ใช่การตั้งค่าที่แก้ในแอปได้ เพราะแอปเป็น local-only —
-          ทุกคนที่ติดตั้งแอปนี้จะเห็นช่องทางบริจาคเดียวกันเสมอ ต้องแก้ที่โค้ดแล้ว deploy ใหม่เท่านั้น
+          แก้ไขข้อมูลนี้ผ่าน<b>แอปแยกต่างหาก "parauy-admin"</b> เท่านั้น (ใส่รหัส {ADMIN_ACCESS_CODE} ตอนบันทึก)
+          ข้อมูลเก็บอยู่บน Supabase กลาง ทุกเครื่องที่เปิดแอปจะดึงค่าล่าสุดไปแสดงอัตโนมัติ ไม่ต้อง build/deploy ใหม่
         </div>
         {hasChannel ? (
           <div className="space-y-1.5" style={{ fontFamily: MONO_FONT, fontSize: 12, color: C.ink }}>
@@ -573,7 +564,7 @@ function AdminScreen({ go, donate, onOpenPreview, onLockAdmin, onLoadDemo }) {
           </div>
         ) : (
           <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense }}>
-            ยังไม่ได้ใส่ข้อมูล — แก้ค่าคงที่ <code>DONATE_INFO</code> ที่ต้นไฟล์ App.jsx แล้ว build/deploy ใหม่
+            ยังไม่ได้ใส่ข้อมูล — เปิดแอป "parauy-admin" เพื่อกรอกข้อมูล
           </div>
         )}
       </Card>
@@ -629,7 +620,7 @@ function GuideScreen({ go }) {
 
 /* ---------------- About / เกี่ยวกับผู้พัฒนา ---------------- */
 
-function AboutScreen({ go, onOpenDonate }) {
+function AboutScreen({ go, onOpenDonate, aboutText }) {
   return (
     <div className="px-4 pt-5 pb-4 space-y-4">
       <div className="flex items-center gap-2">
@@ -643,9 +634,8 @@ function AboutScreen({ go, onOpenDonate }) {
       </Card>
 
       <Card style={{ padding: 16 }}>
-        <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink, lineHeight: 1.8 }}>
-          แอปนี้พัฒนาขึ้นเพื่อช่วยให้การบันทึกรายรับ-รายจ่ายเป็นเรื่องง่าย เก็บข้อมูลไว้บนเครื่องของคุณเองทั้งหมด
-          ไม่มีการส่งข้อมูลการเงินของคุณไปที่ไหน หากแอปนี้มีประโยชน์กับคุณ สามารถสนับสนุนผู้พัฒนาได้ตามกำลังครับ 🙏
+        <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+          {aboutText}
         </div>
       </Card>
 
@@ -1530,8 +1520,18 @@ export default function App() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
 
-  const [adminPin, setAdminPin] = useState(null);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+
+  const [remoteAbout, setRemoteAbout] = useState(null);
+  useEffect(() => {
+    fetchAboutConfig().then((cfg) => { if (cfg) setRemoteAbout(cfg); }).catch(() => {});
+  }, []);
+  const donateInfo = useMemo(() => ({
+    name: remoteAbout?.developer_name || DONATE_INFO.name,
+    promptpay: remoteAbout?.promptpay || DONATE_INFO.promptpay,
+    link: remoteAbout?.donate_link || DONATE_INFO.link,
+  }), [remoteAbout]);
+  const aboutText = remoteAbout?.about_text || DEFAULT_ABOUT_TEXT;
 
   const [screen, setScreen] = useState("dashboard");
   const [tplDetailId, setTplDetailId] = useState(null);
@@ -1605,12 +1605,6 @@ export default function App() {
           if (res && res.value) setProfile(JSON.parse(res.value));
         }
       } catch (e) { /* no profile yet */ }
-      try {
-        if (window.storage) {
-          const res = await window.storage.get(ADMIN_KEY, false);
-          if (res && res.value) setAdminPin(res.value);
-        }
-      } catch (e) { /* no admin pin yet */ }
       setProfileLoaded(true);
     })();
   }, []);
@@ -1637,14 +1631,8 @@ export default function App() {
   const logout = () => { setSessionActive(false); go("dashboard"); };
 
   /* ---- hidden admin area ---- */
-  const createAdminPin = (pin) => {
-    setAdminPin(pin);
-    setAdminUnlocked(true);
-    if (window.storage) window.storage.set(ADMIN_KEY, pin, false).catch(() => {});
-    go("admin");
-  };
   const unlockAdmin = (pin) => {
-    if (pin === adminPin) { setAdminUnlocked(true); go("admin"); return true; }
+    if (pin === ADMIN_ACCESS_CODE) { setAdminUnlocked(true); go("admin"); return true; }
     return false;
   };
   const lockAdmin = () => setAdminUnlocked(false);
@@ -1844,12 +1832,12 @@ export default function App() {
   }
   if (!profile) return <WelcomeScreen onCreate={createProfile} isStandalone={isStandalone} isIOS={isIOS} onInstallClick={triggerInstall} canInstall={!!installPromptEvent} />;
   if (!sessionActive) return <LoginScreen profile={profile} onLogin={() => setSessionActive(true)} />;
-  if (screen === "adminGate") return <AdminGateScreen hasAdminPin={!!adminPin} onUnlock={unlockAdmin} onCreate={createAdminPin} go={go} />;
-  if (screen === "admin" && !adminUnlocked) return <AdminGateScreen hasAdminPin={!!adminPin} onUnlock={unlockAdmin} onCreate={createAdminPin} go={go} />;
+  if (screen === "adminGate") return <AdminGateScreen onUnlock={unlockAdmin} go={go} />;
+  if (screen === "admin" && !adminUnlocked) return <AdminGateScreen onUnlock={unlockAdmin} go={go} />;
   if (screen === "admin") return (
     <>
-      <AdminScreen go={go} donate={DONATE_INFO} onOpenPreview={() => setDonateOpen(true)} onLockAdmin={lockAdmin} onLoadDemo={loadDemoData} />
-      <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={DONATE_INFO} isOwnerView={true} go={go} />
+      <AdminScreen go={go} donate={donateInfo} isLive={!!remoteAbout} onOpenPreview={() => setDonateOpen(true)} onLockAdmin={lockAdmin} onLoadDemo={loadDemoData} />
+      <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={donateInfo} isOwnerView={true} go={go} />
       <ConfirmDialog state={confirmState} onCancel={() => setConfirmState(null)} />
     </>
   );
@@ -1898,7 +1886,7 @@ export default function App() {
       onExport={exportData} onImport={importData}
       profile={profile} onUpdatePin={(pin) => saveProfile({ ...profile, pin })} />
   );
-  else if (screen === "about") body = <AboutScreen go={go} onOpenDonate={() => setDonateOpen(true)} />;
+  else if (screen === "about") body = <AboutScreen go={go} onOpenDonate={() => setDonateOpen(true)} aboutText={aboutText} />;
   else body = <Dashboard data={data} derived={derived} go={go} profile={profile} onSecretTap={() => go("adminGate")} onOpenDonate={() => setDonateOpen(true)} />;
 
   return (
@@ -1941,7 +1929,7 @@ export default function App() {
           )}
         </Sheet>
 
-        <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={DONATE_INFO} isOwnerView={false} go={go} />
+        <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} donate={donateInfo} isOwnerView={false} go={go} />
         <ConfirmDialog state={confirmState} onCancel={() => setConfirmState(null)} />
       </div>
     </div>
