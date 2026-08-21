@@ -7,27 +7,32 @@ export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-const CACHE_KEY = "parauy:about-config-cache";
-
 /**
- * Read-only fetch of the global About/Donate config.
+ * Read-only fetch of this app's global About/Donate config, identified by
+ * appId (e.g. "parauy"). Multiple independent apps can share the same
+ * Supabase project/table (app_config) — each app only ever reads its own
+ * row and never sees another app's data.
+ *
  * - Returns the live row from Supabase when online and reachable.
- * - Falls back to the last successfully cached copy (localStorage) when
- *   offline or Supabase isn't configured — the main app is local-only
- *   for user data, so this must never block or crash without a network.
+ * - Falls back to the last successfully cached copy (localStorage, keyed
+ *   per appId) when offline or Supabase isn't configured — the main app
+ *   is local-only for user data, so this must never block or crash
+ *   without a network.
  * - Returns null if there is neither a live value nor a cached one yet,
- *   letting the caller fall back to the bundled DONATE_INFO default.
+ *   letting the caller fall back to a bundled default.
  */
-export async function fetchAboutConfig() {
+export async function fetchAboutConfig(appId) {
+  const cacheKey = `parauy:about-config-cache:${appId}`;
+
   if (supabase) {
     try {
       const { data, error } = await supabase
-        .from("about_config")
-        .select("developer_name, about_text, promptpay, donate_link")
-        .eq("id", 1)
+        .from("app_config")
+        .select("developer_name, about_text, promptpay, bank_name, bank_account_no, bank_account_name, donate_link")
+        .eq("app_id", appId)
         .single();
       if (!error && data) {
-        try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+        try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) {}
         return data;
       }
     } catch (e) {
@@ -35,7 +40,7 @@ export async function fetchAboutConfig() {
     }
   }
   try {
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cached = localStorage.getItem(cacheKey);
     if (cached) return JSON.parse(cached);
   } catch (e) {}
   return null;

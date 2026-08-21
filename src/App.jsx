@@ -92,6 +92,13 @@ const ADMIN_ACCESS_CODE = "546287";
 
 const DEFAULT_ABOUT_TEXT = "แอปนี้พัฒนาขึ้นเพื่อช่วยให้การบันทึกรายรับ-รายจ่ายเป็นเรื่องง่าย เก็บข้อมูลไว้บนเครื่องของคุณเองทั้งหมด ไม่มีการส่งข้อมูลการเงินของคุณไปที่ไหน หากแอปนี้มีประโยชน์กับคุณ สามารถสนับสนุนผู้พัฒนาได้ตามกำลังครับ 🙏";
 
+/**
+ * ตัวระบุแอปนี้สำหรับดึงค่า About/Donate จาก Supabase (ตาราง app_config)
+ * แต่ละแอปในเครือใช้ app_id ไม่ซ้ำกัน เพื่อให้แอดมินกลางแยกจัดการอิสระต่อกันได้
+ * (เช่น แอปอื่นอาจตั้งเป็น "app2", "app3" ใช้ธนาคาร/ช่องทางคนละอย่าง)
+ */
+const APP_ID = "parauy";
+
 function buildSeed() {
   const todayDay = todayObj.getDate();
   const templates = [
@@ -453,10 +460,10 @@ function LoginScreen({ profile, onLogin }) {
 /* ---------------- Donate sheet ---------------- */
 
 function DonateSheet({ open, onClose, donate, isOwnerView, go }) {
-  const hasChannel = donate && (donate.promptpay || donate.link);
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(donate.promptpay); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {}
+  const hasChannel = donate && (donate.promptpay || donate.link || donate.bankAccountNo);
+  const [copied, setCopied] = useState("");
+  const copy = async (text, key) => {
+    try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(""), 1500); } catch (e) {}
   };
   return (
     <Sheet open={open} onClose={onClose} title="สนับสนุนผู้พัฒนา">
@@ -475,9 +482,22 @@ function DonateSheet({ open, onClose, donate, isOwnerView, go }) {
                 alt="QR สนับสนุน" className="mx-auto mb-2 rounded-lg" width={160} height={160}
               />
               <div style={{ fontFamily: MONO_FONT, fontSize: 13, color: C.ink, marginBottom: 8 }}>{donate.promptpay}</div>
-              <button onClick={copy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style={{ background: C.sage, fontFamily: BODY_FONT, fontSize: 12, color: C.ink }}>
-                <Copy size={13} /> {copied ? "คัดลอกแล้ว" : "คัดลอกเลข PromptPay"}
+              <button onClick={() => copy(donate.promptpay, "pp")} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style={{ background: C.sage, fontFamily: BODY_FONT, fontSize: 12, color: C.ink }}>
+                <Copy size={13} /> {copied === "pp" ? "คัดลอกแล้ว" : "คัดลอกเลข PromptPay"}
               </button>
+            </Card>
+          )}
+          {donate.bankAccountNo && (
+            <Card style={{ padding: 16 }}>
+              <div style={{ fontFamily: BODY_FONT, fontSize: 11, color: C.inkSoft, marginBottom: 6 }}>โอนผ่านบัญชีธนาคาร</div>
+              {donate.bankName && <div style={{ fontFamily: BODY_FONT, fontSize: 13, color: C.ink }}>ธนาคาร{donate.bankName}</div>}
+              <div className="flex items-center justify-between mt-1">
+                <div style={{ fontFamily: MONO_FONT, fontSize: 14, color: C.ink, fontWeight: 700 }}>{donate.bankAccountNo}</div>
+                <button onClick={() => copy(donate.bankAccountNo, "bank")} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: C.sage, fontFamily: BODY_FONT, fontSize: 11, color: C.ink }}>
+                  <Copy size={12} /> {copied === "bank" ? "คัดลอกแล้ว" : "คัดลอก"}
+                </button>
+              </div>
+              {donate.bankAccountName && <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, marginTop: 2 }}>ชื่อบัญชี: {donate.bankAccountName}</div>}
             </Card>
           )}
           {donate.link && (
@@ -534,7 +554,7 @@ function AdminGateScreen({ onUnlock, go }) {
 }
 
 function AdminScreen({ go, donate, isLive, onOpenPreview, onLockAdmin, onLoadDemo }) {
-  const hasChannel = donate.promptpay || donate.link;
+  const hasChannel = donate.promptpay || donate.link || donate.bankAccountNo;
   return (
     <div className="px-4 pt-5 pb-4 space-y-4">
       <div className="flex items-center gap-2">
@@ -553,18 +573,19 @@ function AdminScreen({ go, donate, isLive, onOpenPreview, onLockAdmin, onLoadDem
           </span>
         </div>
         <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.inkSoft, lineHeight: 1.7, marginBottom: 10 }}>
-          แก้ไขข้อมูลนี้ผ่าน<b>แอปแยกต่างหาก "parauy-admin"</b> เท่านั้น (ใส่รหัส {ADMIN_ACCESS_CODE} ตอนบันทึก)
+          แก้ไขข้อมูลนี้ผ่าน<b>แอปแยกต่างหาก "central-admin"</b> เท่านั้น (App ID ของแอปนี้คือ <code>{APP_ID}</code>, ใส่รหัส {ADMIN_ACCESS_CODE} ตอนบันทึก)
           ข้อมูลเก็บอยู่บน Supabase กลาง ทุกเครื่องที่เปิดแอปจะดึงค่าล่าสุดไปแสดงอัตโนมัติ ไม่ต้อง build/deploy ใหม่
         </div>
         {hasChannel ? (
           <div className="space-y-1.5" style={{ fontFamily: MONO_FONT, fontSize: 12, color: C.ink }}>
             {donate.name && <div>ชื่อผู้รับ: {donate.name}</div>}
             {donate.promptpay && <div>PromptPay: {donate.promptpay}</div>}
+            {donate.bankAccountNo && <div>ธนาคาร{donate.bankName}: {donate.bankAccountNo} ({donate.bankAccountName})</div>}
             {donate.link && <div>ลิงก์: {donate.link}</div>}
           </div>
         ) : (
           <div style={{ fontFamily: BODY_FONT, fontSize: 12, color: C.expense }}>
-            ยังไม่ได้ใส่ข้อมูล — เปิดแอป "parauy-admin" เพื่อกรอกข้อมูล
+            ยังไม่ได้ใส่ข้อมูล — เปิดแอป "central-admin" เพื่อกรอกข้อมูลของแอป <code>{APP_ID}</code>
           </div>
         )}
       </Card>
@@ -1557,12 +1578,15 @@ export default function App() {
 
   const [remoteAbout, setRemoteAbout] = useState(null);
   useEffect(() => {
-    fetchAboutConfig().then((cfg) => { if (cfg) setRemoteAbout(cfg); }).catch(() => {});
+    fetchAboutConfig(APP_ID).then((cfg) => { if (cfg) setRemoteAbout(cfg); }).catch(() => {});
   }, []);
   const donateInfo = useMemo(() => ({
     name: remoteAbout?.developer_name || DONATE_INFO.name,
     promptpay: remoteAbout?.promptpay || DONATE_INFO.promptpay,
     link: remoteAbout?.donate_link || DONATE_INFO.link,
+    bankName: remoteAbout?.bank_name || "",
+    bankAccountNo: remoteAbout?.bank_account_no || "",
+    bankAccountName: remoteAbout?.bank_account_name || "",
   }), [remoteAbout]);
   const aboutText = remoteAbout?.about_text || DEFAULT_ABOUT_TEXT;
 
